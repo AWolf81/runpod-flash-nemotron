@@ -23,7 +23,7 @@ Three phases take this from nothing to a complete OSS developer tool: first buil
 **Success Criteria** (what must be TRUE):
   1. Developer can run `flash deploy` with `nemotron.py` and get a live RunPod endpoint URL
   2. Developer can pre-populate the network volume with `download_model.py` before first deploy (prevents cold-start timeout loop)
-  3. llama-server starts with correct flags (`-ngl 99 --override-tensor "exps=CPU" -c 8192 -fa --no-mmap -np 1 --cont-batching`) and responds to `/v1/chat/completions` requests on port 8080
+  3. llama-server starts with correct flags (`-ngl 99 --override-tensor "exps=CPU" -c 32768 -fa --no-mmap -np 1 --cont-batching`) and responds to `/v1/chat/completions` requests on port 8080
   4. `execution_timeout=1800` and `idle_timeout` tuning are configured and documented inline
 **Research**: Unlikely (stack fully researched; all RunPod Flash SDK params, llama-server flags, and HuggingFace download patterns confirmed at HIGH confidence)
 **Plans**: TBD

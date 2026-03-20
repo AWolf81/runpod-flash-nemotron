@@ -12,7 +12,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **DEPL-01**: Developer can deploy a serverless endpoint with a single `flash deploy` command using `nemotron.py`
 - [ ] **DEPL-02**: Deployment script configures A100 80GB GPU (`GpuGroup.AMPERE_80`), 100 GB Network Volume, FlashBoot, and `execution_timeout=1800`
 - [ ] **DEPL-03**: Developer can seed the Network Volume using `download_model.py` before first deploy, preventing cold-start timeout loop
-- [ ] **DEPL-04**: llama-server starts with correct flags (`-ngl 99 --override-tensor "exps=CPU" -c 8192 -fa --no-mmap -np 1 --cont-batching`), exposing `/v1/chat/completions` on port 8080
+- [ ] **DEPL-04**: llama-server starts with correct flags (`-ngl 99 --override-tensor "exps=CPU" -c 32768 -fa --no-mmap -np 1 --cont-batching`), exposing `/v1/chat/completions` on port 8080
 - [ ] **DEPL-05**: `execution_timeout=1800` is set with inline comment explaining why (120B models require >10 min for long responses)
 - [ ] **DEPL-06**: `--override-tensor "exps=CPU"` is documented with explanation that MoE expert weights exceed VRAM and must route to CPU RAM
 - [ ] **DEPL-07**: `idle_timeout` tuning is documented with guidance on reducing billing for short coding sessions
@@ -29,7 +29,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **DOCS-02**: Cost breakdown documents scale-to-zero vs always-on trade-offs and $20/month math (~10.5 GPU-hours at ~$1.89/hr)
 - [ ] **DOCS-03**: NVIDIA-recommended sampling defaults (`--temp 1.0 --top-p 0.95`) are documented with source reference
 - [ ] **DOCS-04**: EU-RO-1 datacenter restriction is noted with latency implications for non-EU users
-- [ ] **DOCS-05**: Context window tuning documents `-c` flag options and VRAM/RAM constraints (why 8192 is the safe cap)
+- [ ] **DOCS-05**: Context window tuning documents `-c` flag options and VRAM/RAM constraints (32768 default; scaling ladder to 131072; why 200k OOMs — KV cache ~320KB/token lives in VRAM, non-expert weights use ~25-30 GB of the 80 GB)
 - [ ] **DOCS-06**: MIT LICENSE file is included in the repository
 
 ## v2 Requirements
