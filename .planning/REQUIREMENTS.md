@@ -62,27 +62,27 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DEPL-01 | — | Pending |
-| DEPL-02 | — | Pending |
-| DEPL-03 | — | Pending |
-| DEPL-04 | — | Pending |
-| DEPL-05 | — | Pending |
-| DEPL-06 | — | Pending |
-| DEPL-07 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| INTG-03 | — | Pending |
-| DOCS-01 | — | Pending |
-| DOCS-02 | — | Pending |
-| DOCS-03 | — | Pending |
-| DOCS-04 | — | Pending |
-| DOCS-05 | — | Pending |
-| DOCS-06 | — | Pending |
+| DEPL-01 | Phase 1 | Pending |
+| DEPL-02 | Phase 1 | Pending |
+| DEPL-03 | Phase 1 | Pending |
+| DEPL-04 | Phase 1 | Pending |
+| DEPL-05 | Phase 1 | Pending |
+| DEPL-06 | Phase 1 | Pending |
+| DEPL-07 | Phase 1 | Pending |
+| INTG-01 | Phase 2 | Pending |
+| INTG-02 | Phase 2 | Pending |
+| INTG-03 | Phase 2 | Pending |
+| DOCS-01 | Phase 3 | Pending |
+| DOCS-02 | Phase 3 | Pending |
+| DOCS-03 | Phase 3 | Pending |
+| DOCS-04 | Phase 3 | Pending |
+| DOCS-05 | Phase 3 | Pending |
+| DOCS-06 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0 (pending create-roadmap)
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-20*
