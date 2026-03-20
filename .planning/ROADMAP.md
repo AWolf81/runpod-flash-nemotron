@@ -10,7 +10,7 @@ Three phases take this from nothing to a complete OSS developer tool: first buil
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Core Deployment Script** - nemotron.py + download_model.py that successfully deploy Nemotron-3-Super on RunPod A100 80GB
+- [x] **Phase 1: Core Deployment Script** - nemotron.py + download_model.py that successfully deploy Nemotron-3-Super on RunPod A100 80GB
 - [ ] **Phase 2: Integration Guides** - Tested config snippets for Claude Code, OpenCode, and Mistral Vibe
 - [ ] **Phase 3: README & Documentation** - Complete quickstart README with cost breakdown and known limitations
 
@@ -29,8 +29,8 @@ Three phases take this from nothing to a complete OSS developer tool: first buil
 **Plans**: TBD
 
 Plans:
-- [ ] 01-01: Write nemotron.py (Endpoint, GpuGroup.AMPERE_80, NetworkVolume, FlashBoot, llama-server CMD)
-- [ ] 01-02: Write download_model.py (snapshot_download with HF_TOKEN, UD-Q4_K_XL pattern)
+- [x] 01-01: Write nemotron.py (Endpoint, GpuGroup.AMPERE_80, NetworkVolume, FlashBoot, llama-server CMD)
+- [x] 01-02: Write download_model.py (snapshot_download with HF_TOKEN, UD-Q4_K_XL pattern)
 
 ### Phase 2: Integration Guides
 **Goal**: Developers can connect Claude Code, OpenCode, and Mistral Vibe to their RunPod endpoint with copy-paste config
@@ -69,6 +69,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Deployment Script | 0/2 | Not started | - |
+| 1. Core Deployment Script | 2/2 | Complete | 2026-03-20 |
 | 2. Integration Guides | 0/1 | Not started | - |
 | 3. README & Documentation | 0/2 | Not started | - |
