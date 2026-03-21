@@ -11,7 +11,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **DEPL-01**: Developer can deploy a serverless endpoint with a single `flash deploy` command using `nemotron.py`
 - [ ] **DEPL-02**: Deployment script configures A100 80GB GPU (`GpuGroup.AMPERE_80`), 100 GB Network Volume, FlashBoot, and `execution_timeout=1800`
-- [ ] **DEPL-03**: Developer can seed the Network Volume using `download_model.py` before first deploy, preventing cold-start timeout loop
+- [ ] **DEPL-03**: Developer can run a one-time remote seed job using `python nemotron.py seed` before first deploy, preventing cold-start timeout loop
 - [ ] **DEPL-04**: llama-server starts with correct flags (`-ngl 99 --override-tensor "exps=CPU" -c 32768 -fa --no-mmap -np 1 --cont-batching`), exposing `/v1/chat/completions` on port 8080
 - [ ] **DEPL-05**: `execution_timeout=1800` is set with inline comment explaining why (120B models require >10 min for long responses)
 - [ ] **DEPL-06**: `--override-tensor "exps=CPU"` is documented with explanation that MoE expert weights exceed VRAM and must route to CPU RAM
@@ -72,12 +72,12 @@ Which phases cover which requirements. Updated by create-roadmap.
 | INTG-01 | Phase 2 | Pending |
 | INTG-02 | Phase 2 | Pending |
 | INTG-03 | Phase 2 | Pending |
-| DOCS-01 | Phase 3 | Pending |
-| DOCS-02 | Phase 3 | Pending |
-| DOCS-03 | Phase 3 | Pending |
-| DOCS-04 | Phase 3 | Pending |
-| DOCS-05 | Phase 3 | Pending |
-| DOCS-06 | Phase 3 | Pending |
+| DOCS-01 | Phase 3 | Complete |
+| DOCS-02 | Phase 3 | Complete |
+| DOCS-03 | Phase 3 | Complete |
+| DOCS-04 | Phase 3 | Complete |
+| DOCS-05 | Phase 3 | Complete |
+| DOCS-06 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
