@@ -1,198 +1,210 @@
 # Pitfalls Research
 
-**Domain:** Serverless AI inference deployment (RunPod Flash + GGUF)
-**Researched:** 2026-03-20
-**Confidence:** HIGH
+**Domain:** RunPod Flash LLM deployment hardening (v0.2.0)
+**Researched:** 2026-03-22
+**Confidence:** HIGH (llama.cpp issues), MEDIUM (RunPod-specific), HIGH (SSE testing)
 
 ## Critical Pitfalls
 
-### Pitfall 1: UD-Q4_K_XL Fails to Load on Old llama.cpp Builds
+### Pitfall 1: NemotronH SSM State Multiplies Per Slot at --parallel 2+
 
 **What goes wrong:**
-llama.cpp builds before commit `88915cb55c` (pre-PR #20411) fail to load the UD-Q4_K_XL quant with a tensor shape mismatch error. The worker starts, attempts model load, then crashes silently or throws a cryptic assertion error. The endpoint appears deployed but never becomes healthy.
+NemotronH uses Mamba/SSM layers with recurrent state. Unlike attention KV cache (which is small due
+to MQA), the SSM state memory scales linearly with `--parallel N`. With N=2, SSM state doubles.
+This is separate from the KV cache math and can cause unexpected OOM.
 
 **Why it happens:**
-Nemotron-3-Super uses a LatentMoE architecture with tensor shapes that older llama.cpp versions don't handle correctly. The UD-Q4_K_XL quant specifically requires the fix from PR #20411.
+Developers calculate only attention KV cache VRAM (easy math: 48 attn layers × MQA) and forget
+that Mamba recurrent state is also per-slot. The SSM state per slot is ~200MB, so N=2 adds ~400MB
+— likely fine on 96GB, but needs to be measured, not assumed.
 
 **How to avoid:**
-Always use `ghcr.io/ggml-org/llama.cpp:server-cuda` latest, or pin to build ≥ b4900. Never use a pinned older image like `server-cuda-b3xxx`.
+Test `--parallel 2` empirically and monitor VRAM with `nvidia-smi` or `gpustat --watch 1`. Don't
+rely purely on theoretical calculations. Check llama.cpp issue #19552 / PR #19559 for NemotronH
+SSM slot allocation details.
 
 **Warning signs:**
-Worker shows "initializing" indefinitely; logs show tensor errors or `GGML_ASSERT` failures on model load.
+CUDA out-of-memory error in llama-server logs when first request arrives after raising `--parallel`.
 
-**Phase to address:**
-Phase 1 (deployment script) — pin the correct Docker image tag.
+**Phase to address:** v0.2.0 — parallel slots investigation
 
 ---
 
-### Pitfall 2: VRAM OOM at Context Lengths Beyond ~4096 Tokens
+### Pitfall 2: --ctx-size is a Pool, Not Per-Slot
 
 **What goes wrong:**
-The 83.8 GB model weights + KV cache + compute buffers exceeds A100 80 GB VRAM at default or large context lengths. The process is SIGKILL'd silently with no warning to the user — the worker dies and RunPod marks it unhealthy.
+Setting `--parallel 2` with `--ctx-size 32768` gives each slot only 16K context — half of what
+users expect. README says "32K context" but this is only true with `--parallel 1`.
 
 **Why it happens:**
-Model weights alone occupy ~60-65 GB of VRAM. Each additional 4096 tokens of KV cache consumes several GB more. At `-c 8192` with full KV, the total easily exceeds 80 GB.
+llama-server `--ctx-size` sets the total KV budget shared across ALL slots. Most documentation
+presents `--ctx-size` as the context window size, not the total pool. See llama.cpp issue #11681.
 
 **How to avoid:**
-Use `--override-tensor "exps=CPU"` to offload MoE routed expert weights to CPU RAM — this is mandatory, not optional. Keep default context at `-c 8192` maximum. Document the tradeoff in README. Use `-fa` (flash attention) to reduce KV cache memory.
+When raising `--parallel`, also raise `--ctx-size` proportionally: `--ctx-size = parallel × target_context`.
+For `--parallel 2` with 32K context per slot: `--ctx-size 65536`.
+Document this trade-off explicitly in README.
 
 **Warning signs:**
-Worker restarts mid-conversation; OOM errors in llama-server logs; requests that succeed for short prompts fail for long ones.
+Long conversations get truncated unexpectedly when `--parallel` > 1; token count errors in responses.
 
-**Phase to address:**
-Phase 1 (deployment script) — include correct llama-server flags.
+**Phase to address:** v0.2.0 — parallel slots investigation + README update
 
 ---
 
-### Pitfall 3: Cold Start Timeout — 83.8 GB Download Exceeds Worker Init Limit
+### Pitfall 3: Slot Priming Only Covers Slot 0 With --parallel 2+
 
 **What goes wrong:**
-RunPod workers have a maximum initialization timeout (~7 minutes). Downloading 83.8 GB from HuggingFace on first cold start takes far longer than this. Without a pre-populated network volume, the endpoint cycles: init → unhealthy → killed → init → ... indefinitely.
+The current `_slot_primed` implementation sends one warmup request, priming only slot 0. With
+`--parallel 2`, the first real request that hits slot 1 still has uninitialized KV cache and may
+time out.
 
 **Why it happens:**
-Developers deploy the script, see the endpoint "starting," and assume it'll eventually come up. It never does because the download never completes within the timeout.
+The warmup was designed for `--parallel 1`. llama-server assigns requests to slots round-robin or
+based on availability — slot 1 may not be touched by a single warmup request.
 
 **How to avoid:**
-Pre-populate the network volume before first deploy: run a one-off download job, or provide a `download.py` helper script that users run once to seed the volume. Document this as a required prerequisite step. With network volume populated, subsequent cold starts skip the download entirely.
+When raising `--parallel N`, send N concurrent warmup requests during health check to prime all
+slots. Or use llama-server's `/slots` endpoint to verify all slots are initialized.
 
 **Warning signs:**
-Endpoint health check never passes; CloudWatch/RunPod logs show download progress that resets repeatedly.
+First request after health check succeeds, but second concurrent request times out.
 
-**Phase to address:**
-Phase 1 (deployment script) — include model pre-download step in quickstart.
+**Phase to address:** v0.2.0 — parallel slots implementation
 
 ---
 
-### Pitfall 4: NVIDIA's Official Requirements Are 8×H100 — Community-Only Support
+### Pitfall 4: E2E Verification Against Warm Worker Masks Cold Start Bugs
 
 **What goes wrong:**
-NVIDIA officially targets 8×H100-80GB for Nemotron-3-Super-120B-A12B. Running on a single A100 via GGUF is entirely community-supported and untested by NVIDIA or Unsloth for this specific variant. Users may encounter undocumented behavior.
+Testing against a running worker with model already loaded in VRAM passes all checks, but a
+"fresh volume" cold start (new user, clean state) fails because the binary-restore or model-load
+step has a bug that's not exercised in warm tests.
 
 **Why it happens:**
-The model card references FP8/multi-GPU as the primary deployment path. The GGUF path is maintained by the community and may lag behind model updates or have subtle incompatibilities.
+The warm path (binary already cached, model already loaded) skips most of the seed/restore code.
+Bugs in seed output format, binary path, or cold start sequence are invisible.
 
 **How to avoid:**
-Clearly document in README that this is a community-supported GGUF path. Note the known-good llama.cpp build version. Link to the unsloth HuggingFace model discussion thread for latest known issues.
+True E2E verification requires wiping the volume or using a separate test volume, then running the
+full deploy → seed → first cold start sequence. This is the only way to confirm a stranger can
+clone and use the repo.
 
 **Warning signs:**
-Unexpected output degradation; model card updates that don't mention GGUF compatibility.
+Tests pass but README disclaimer "not fully verified" is still accurate.
 
-**Phase to address:**
-Phase 3 (documentation) — README caveats section.
+**Phase to address:** v0.2.0 — E2E verification
 
 ---
 
-### Pitfall 5: Mamba-2 SSM Architecture May Trigger GGML_ASSERT Crashes
+### Pitfall 5: RunPod Flash ~600s Hard HTTP Timeout
 
 **What goes wrong:**
-Nemotron-3-Super uses a hybrid Mamba-2 SSM + Transformer architecture. Confirmed crashes (`GGML_ASSERT` at `mamba-base.cpp:173`) have been observed on the Nano variant (same architecture family). The Super variant may exhibit similar issues under certain batch sizes or context configurations.
+RunPod Flash has a hard HTTP timeout (~600 seconds) on the load balancer. Requests exceeding this
+are terminated with a 504 error regardless of `execution_timeout` in `nemotron.py`. Very long
+generations (or slow first requests after cold start) can hit this.
 
 **Why it happens:**
-llama.cpp's Mamba-2 implementation has edge cases around state management. Specific sequence lengths or batch configurations trigger assertion failures.
+The configured `execution_timeout` controls worker lifecycle, not per-request HTTP timeout. The LB
+timeout is a separate, platform-enforced limit.
 
 **How to avoid:**
-Use `-np 1` (single parallel slot) to reduce SSM state complexity. Avoid `--cont-batching` with very large batch sizes. Test with several prompts before declaring deployment healthy.
+Keep `max_tokens` reasonable in integration tests. Document the platform timeout in README for
+users who want very long generations. For streaming, connection is kept alive by token delivery —
+this mainly affects non-streaming requests with very long completions.
 
 **Warning signs:**
-Intermittent worker crashes that don't correlate with context length; crashes on specific prompt patterns.
+504 errors on long non-streaming requests; errors not reproducible with streaming or short requests.
 
-**Phase to address:**
-Phase 1 (deployment script) — conservative `-np 1` default.
+**Phase to address:** v0.2.0 — documentation
 
 ---
 
-### Pitfall 6: Execution Timeout Too Short for Long Reasoning Responses
+### Pitfall 6: curl Buffers SSE by Default (Missing -N)
 
 **What goes wrong:**
-RunPod's default execution timeout (600 seconds) is insufficient for 120B model responses at ~14 tokens/second. A 16k-token response takes ~1,143 seconds. Requests time out mid-generation; the worker is killed; the user gets a truncated or empty response.
+Testing streaming with `curl` without the `-N` / `--no-buffer` flag causes curl to buffer the
+entire response before displaying it. Streaming appears to "not work" when it actually does.
 
 **Why it happens:**
-Default timeouts are set for typical API response times (seconds, not minutes). LLM generation at 120B scale is fundamentally slower.
+curl's default behavior buffers output for efficiency. Without `-N`, SSE tokens accumulate
+silently and are printed all at once when the connection closes.
 
 **How to avoid:**
-Set `execution_timeout` in the RunPod Flash endpoint config to at least 1800 seconds (30 minutes). Document this in the deployment script with a comment explaining why.
+Always use `curl -N` for SSE tests. Document this in testing instructions and README examples.
 
 **Warning signs:**
-Requests complete for short prompts but fail for long ones; RunPod logs show "execution timeout exceeded."
+curl output appears after a long delay, all at once, rather than token-by-token.
 
-**Phase to address:**
-Phase 1 (deployment script) — set correct timeout in `Endpoint` config.
+**Phase to address:** v0.2.0 — streaming verification + docs
 
 ---
 
-### Pitfall 7: Billing Starts at Worker Init, Not First Token
+### Pitfall 7: Proxy Buffering Masks SSE Failure Under Parallel Load
 
 **What goes wrong:**
-Each cold start bills GPU time from the moment the A100 is allocated, not when the first token is generated. At $0.00076/second for an A100, a 3-minute cold start costs ~$0.14 in overhead before any useful work. With frequent cold starts, this overhead can exceed the actual inference cost.
+SSE streaming appears to work in isolation but fails under concurrent load because a proxy or
+middleware layer starts buffering when multiple connections are open simultaneously.
 
 **Why it happens:**
-RunPod serverless billing is per-GPU-second of allocation. Model loading (~2-3 minutes on A100 with network volume) is billed time.
+Some nginx configurations only disable buffering for the first N connections. Under `--parallel 2`
+with concurrent streaming requests, one connection may be buffered by an intermediate layer.
 
 **How to avoid:**
-Use `idle_timeout` to keep warm workers alive between requests during active sessions. Document the cost math: cold start overhead is ~$0.14/start vs. keeping warm at $1.89/hr. Recommend keeping workers alive during active coding sessions.
+Test streaming with two concurrent clients simultaneously, not just serially. The `X-Accel-Buffering: no`
+header must be present on every response, verified under concurrent load.
 
 **Warning signs:**
-Monthly bill higher than expected despite low actual token usage; many short sessions with gaps.
+Streaming works in isolation; second concurrent streaming request hangs then delivers all at once.
 
-**Phase to address:**
-Phase 2 (cost documentation) — include cold start cost in cost breakdown.
+**Phase to address:** v0.2.0 — streaming e2e verification
 
 ---
 
-### Pitfall 8: Network Volume Region-Lock Causes Queuing Delays
+### Pitfall 8: "Fresh Volume" vs "Worker Restart" Are Different Things
 
 **What goes wrong:**
-Network volumes are tied to a specific RunPod datacenter. With RunPod Flash currently restricted to EU-RO-1, if A100 80GB GPUs are scarce in that region, requests queue indefinitely waiting for GPU availability.
+Testing a worker restart (container stops/starts with volume intact) is confused with a "fresh
+volume" cold start (new user with no cached binary). These exercise completely different code paths.
 
 **Why it happens:**
-A100 80GB cards are high-demand. EU-RO-1 is a single datacenter with finite capacity. No automatic failover to other regions.
+Worker restart: binary already on volume → restore in seconds → load model.
+Fresh volume: binary missing → must trigger seed first → 30-90 min build → then inference workers work.
+Developers test the restart path and declare E2E "verified" without testing the fresh path.
 
 **How to avoid:**
-Document the EU-RO-1 restriction clearly. Advise users to check GPU availability in EU-RO-1 before committing to the setup. Monitor RunPod status page during initial setup.
+For true E2E verification, use a separate RunPod volume with no pre-cached binary. Follow the
+seed → deploy → cold start sequence documented in README. Verify the README's "quickstart" steps
+produce a working endpoint from a clean state.
 
 **Warning signs:**
-Endpoint shows "queued" status for extended periods; GPU utilization metrics never start.
+README quickstart says "run `python nemotron.py seed` first" but this step has never been tested
+end-to-end on a fresh volume.
 
-**Phase to address:**
-Phase 3 (documentation) — known limitations section in README.
+**Phase to address:** v0.2.0 — E2E verification
 
 ---
 
-### Pitfall 9: llama-server OpenAI Compatibility Gaps
+### Pitfall 9: RunPod SDK Routing Bug Serializes Requests to One Worker
 
 **What goes wrong:**
-llama-server's OpenAI compatibility is incomplete. Known gaps: `POST /v1/responses` returns 404 (Responses API not supported); streaming + tool use cannot be combined in all versions; some clients default to 30-second timeouts that fail for large model responses.
+RunPod SDK versions 1.7.11–1.7.12 contained a routing bug that sent all requests to the same
+worker even when multiple workers were available. Parallel slot tests appear to show correct
+concurrency, but requests are actually being serialized.
 
 **Why it happens:**
-llama-server implements a subset of the OpenAI API, prioritizing `/v1/chat/completions`. Other endpoints are partially or not implemented.
+The bug was in RunPod's request routing layer. Symptoms look like `--parallel 1` even with
+`--parallel 2` because the single active worker handles all requests sequentially.
 
 **How to avoid:**
-Test each target client (Claude Code, OpenCode, Mistral Vibe) against the deployed endpoint before declaring it complete. Document known gaps. Instruct users to set client timeout to at least 300 seconds.
+Pin `runpod-flash>=1.8.1` (already in project). Verify by checking worker logs — both requests
+should appear in llama-server logs with overlapping timestamps.
 
 **Warning signs:**
-Client errors like "404 Not Found" for non-chat endpoints; timeout errors for long responses.
+Concurrent requests take 2× single-request time despite `--parallel 2`; both requests appear in
+the same worker's llama-server logs sequentially rather than overlapping.
 
-**Phase to address:**
-Phase 2 (integration guides) — test each client and document known limitations.
-
----
-
-### Pitfall 10: HF_TOKEN Baked Into Deployment Script
-
-**What goes wrong:**
-If `HF_TOKEN` is hardcoded in `nemotron.py` and committed to a public GitHub repo, the token is permanently exposed. Even after removal, git history retains it.
-
-**Why it happens:**
-Developers copy-paste token values into scripts during testing and forget to parameterize them. A public OSS repo amplifies the blast radius.
-
-**How to avoid:**
-Always pass `HF_TOKEN` via RunPod Secrets (environment variables), never hardcode in the script. In `nemotron.py`, read it via `os.environ["HF_TOKEN"]`. Add `*.env` and explicit token patterns to `.gitignore`. Add a prominent warning in the README.
-
-**Warning signs:**
-HuggingFace sends token compromise emails; unexpected API usage on HF account.
-
-**Phase to address:**
-Phase 1 (deployment script) — use `os.environ` for all secrets from the start.
+**Phase to address:** v0.2.0 — parallel slots investigation
 
 ---
 
@@ -200,93 +212,41 @@ Phase 1 (deployment script) — use `os.environ` for all secrets from the start.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Hardcoding model path in script | Simpler code | Breaks when model moves; users can't customize | Never — use constants |
-| No model hash verification | Faster download | Silent model corruption goes undetected | Never for production |
-| Not documenting llama-server version | Less maintenance | Users hit UD-Q4_K_XL load bug; support burden | Never — pin the version |
-| Omitting idle_timeout config | Simpler deployment | Unexpected billing for idle workers | MVP only, document it |
-| Single-line quickstart without prerequisites | Lower friction | Users hit cold start timeout; abandon project | Document prerequisites first |
-
-## Integration Gotchas
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| HuggingFace download | Use `hf_hub_download` for individual files | Use `snapshot_download` with `allow_patterns="UD-Q4_K_XL/*"` — downloads all 3 split files |
-| RunPod Secrets | Pass token as env var in script | Configure via RunPod dashboard Secrets; reference as `os.environ["HF_TOKEN"]` |
-| llama-server startup | Call server synchronously in handler | Start server as background process; poll `/health` endpoint before serving requests |
-| Claude Code config | Use `ANTHROPIC_BASE_URL` | Use `ANTHROPIC_BASE_URL` for proxy + `ANTHROPIC_API_KEY` set to any non-empty string |
-| OpenCode config | Use `openai` provider type | Provider type must be `openai`; `baseURL` must include `/v1` |
-| Mistral Vibe | Set `MISTRAL_API_KEY` | Set `OPENAI_BASE_URL` + `OPENAI_API_KEY`; Mistral Vibe respects OpenAI env vars |
-
-## Performance Traps
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Default context `-c 32768` | VRAM OOM; worker crashes | Set `-c 8192` maximum | Immediately on A100 80GB |
-| Parallel slots `-np 4` | Increased VRAM; instability | Use `-np 1` for single-user | Any concurrent request |
-| No `--no-mmap` flag | Slow model loading on network volume | Always use `--no-mmap` | Every cold start |
-| Flash attention disabled | Higher VRAM KV cache | Always use `-fa` | At >4096 token contexts |
-| No `--cont-batching` | Queued requests time out | Enable for responsiveness | Multiple pending requests |
-
-## Security Mistakes
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| HF_TOKEN in source code | Token exposure in public repo | RunPod Secrets + `os.environ` |
-| RunPod API key in script | Full account access if leaked | RunPod Secrets; never in code |
-| No API key on llama-server | Open endpoint accessible by anyone with URL | Set `--api-key` flag; document in integration configs |
-| Endpoint URL in README | Public repo = public endpoint | Instruct users to keep their proxy URL private |
-
-## UX Pitfalls
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| No model pre-download step in quickstart | Users deploy, wait 10+ minutes, endpoint never comes up | Add explicit "Step 0: seed network volume" to README |
-| Cold start not mentioned | Users think deployment is broken when first request takes 3 min | Prominent cold start warning with time estimate |
-| No test command in README | Users unsure if deployment worked | Include `curl` test command for `/v1/chat/completions` |
-| EU-RO-1 buried in docs | Non-EU users surprised by latency | Put it in README prerequisites section |
-| Execution timeout not explained | Users confused when long responses fail | Explain the 1800s setting in deployment script comments |
+| Testing only warm path | Fast iteration | "Works for me" but fails for new users | Never — E2E requires fresh volume test |
+| `--parallel 1` default | Zero OOM risk | Single request at a time; queuing for concurrent users | Acceptable for v0.1.0; document and investigate in v0.2.0 |
+| Keeping `download_model.py` | Existing users may reference it | Confusion about which script to use; stale code | Remove in v0.2.0 cleanup |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Deployment script:** Often missing `--api-key` flag — verify llama-server requires auth
-- [ ] **Model caching:** Often missing pre-population step — verify network volume has model files before first deploy
-- [ ] **Claude Code integration:** Often missing timeout config — verify client doesn't use default 30s timeout
-- [ ] **Cost documentation:** Often missing cold start overhead — verify cost math includes per-start billing
-- [ ] **Scale-to-zero docs:** Often missing `idle_timeout` explanation — verify users know how to tune it
-- [ ] **Security:** Often missing HF_TOKEN warning — verify README has prominent secrets guidance
-
-## Recovery Strategies
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| UD-Q4_K_XL load failure | LOW | Update Docker image tag in `nemotron.py`; redeploy |
-| VRAM OOM | LOW | Reduce `-c` value; ensure `--override-tensor "exps=CPU"` is present |
-| Cold start timeout loop | MEDIUM | Manually seed network volume via RunPod pod; then retry serverless deploy |
-| HF_TOKEN exposure | HIGH | Revoke token immediately on HuggingFace; create new token; update RunPod Secret |
-| Execution timeout | LOW | Increase `execution_timeout` in Endpoint config; redeploy |
+- [ ] **E2E verification:** Tested warm path only — verify with actual fresh volume cold start
+- [ ] **Parallel slots:** `--parallel 2` set but slot priming only covers slot 0 — verify all N slots primed
+- [ ] **Streaming:** Tested non-streaming only — verify `curl -N` shows incremental tokens
+- [ ] **Streaming:** Tested serial only — verify two concurrent streaming requests both stream
+- [ ] **Cleanup:** `download_model.py` removed from repo (superseded by `python nemotron.py seed`)
+- [ ] **README disclaimer:** "under active debugging / not fully verified" still present — remove only after fresh volume E2E passes
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| UD-Q4_K_XL load failure | Phase 1: Deployment script | Test `llama-server --version` shows build ≥ b4900 |
-| VRAM OOM | Phase 1: Deployment script | Test with 8192-token prompt; no OOM in logs |
-| Cold start timeout | Phase 1: Deployment script | Network volume pre-populated; cold start < 5 min |
-| Execution timeout | Phase 1: Deployment script | `execution_timeout=1800` in Endpoint config |
-| HF_TOKEN exposure | Phase 1: Deployment script | No token literals in `nemotron.py`; `os.environ` only |
-| OpenAI compat gaps | Phase 2: Integration guides | Test each client end-to-end |
-| Billing surprises | Phase 2: Cost documentation | Cost math reviewed and accurate |
-| EU-RO-1 region lock | Phase 3: Documentation | Noted in README prerequisites |
+|---------|-----------------|--------------|
+| NemotronH SSM state per slot | v0.2.0 parallel investigation | `nvidia-smi` shows no OOM at `--parallel 2` |
+| --ctx-size pool vs per-slot | v0.2.0 parallel investigation | README documents trade-off; `--ctx-size` set correctly |
+| Slot priming N slots | v0.2.0 parallel implementation | All N warmup requests complete before health returns ok |
+| Warm worker masks cold start bugs | v0.2.0 E2E verification | Fresh volume test passes all steps |
+| RunPod 600s timeout | v0.2.0 documentation | README mentions platform timeout limit |
+| curl -N for SSE | v0.2.0 streaming verification | README examples use `curl -N` |
+| Proxy buffering under load | v0.2.0 streaming verification | Concurrent streaming test both deliver tokens incrementally |
+| Fresh volume vs worker restart | v0.2.0 E2E verification | Test procedure uses separate clean volume |
+| RunPod SDK routing bug | Already mitigated (pinned >=1.8.1) | Verify version in requirements |
 
 ## Sources
 
-- unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF model discussion on HuggingFace — UD-Q4_K_XL load bug, PR #20411 confirmation (HIGH confidence)
-- llama.cpp GitHub issues and PRs — Mamba-2 SSM crash reports, GGML_ASSERT at mamba-base.cpp:173 (MEDIUM confidence)
-- RunPod serverless documentation — billing model, worker init timeout, Secrets management (HIGH confidence)
-- RunPod community forums — EU-RO-1 restriction, A100 availability, cold start patterns (MEDIUM confidence)
-- RunPod Flash SDK source/docs — execution_timeout, idle_timeout, NetworkVolume patterns (HIGH confidence)
-- HuggingFace security best practices — token management (HIGH confidence)
+- llama.cpp issue #19552 / PR #19559 — NemotronH SSM slot allocation (HIGH confidence)
+- llama.cpp issue #11681 — `--ctx-size` as total pool clarification (HIGH confidence)
+- RunPod community forum / Discord — 600s LB timeout reports (MEDIUM confidence)
+- curl man page — `--no-buffer` / `-N` flag (HIGH confidence)
+- RunPod Flash changelog — SDK 1.7.11–1.7.12 routing bug (MEDIUM confidence — community reports)
 
 ---
-*Pitfalls research for: Serverless AI inference deployment (runpod-flash-nemotron)*
-*Researched: 2026-03-20*
+*Pitfalls research for: RunPod Flash LLM deployment hardening (v0.2.0)*
+*Researched: 2026-03-22*

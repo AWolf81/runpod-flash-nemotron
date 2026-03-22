@@ -1,137 +1,169 @@
 # Project Research Summary
 
 **Project:** runpod-flash-nemotron
-**Domain:** Serverless AI inference deployment tool (developer tooling / MLOps)
-**Researched:** 2026-03-20
+**Domain:** RunPod Flash serverless LLM deployment hardening
+**Researched:** 2026-03-22
+**Milestone:** v0.2.0 Hardening
 **Confidence:** HIGH
+
+---
 
 ## Executive Summary
 
-runpod-flash-nemotron is a developer tool in a niche but well-understood domain: one-command serverless LLM deployment for a specific model/hardware combination. The architecture is straightforward — a single Python file using the RunPod Flash SDK declares an endpoint, and a pre-built llama.cpp Docker image handles inference. No custom server code, no complex CI/CD. The main value is the opinionated configuration that makes it all work within a $20/month budget.
+v0.2.0 is a hardening milestone, not a feature milestone. The system works — it just hasn't been
+fully verified from a clean state, and it has rough edges (cleanup needed, parallel slots
+uninvestigated, streaming untested end-to-end with real clients). The research confirms all four
+target areas are tractable: none require architectural changes.
 
-The critical technical insight driving this project is that Nemotron-3-Super-120B's 83.8 GB UD-Q4_K_XL weights exceed the A100's 80 GB VRAM, but the MoE architecture allows routing expert weights to CPU RAM via `--override-tensor "exps=CPU"`, making single-A100 deployment feasible at ~14 tokens/second. This community-discovered configuration is the core of the project's value — it's non-obvious and not documented by NVIDIA.
+The biggest finding is about parallel slots: Nemotron-3-Super's hybrid Mamba/attention architecture
+means the KV cache is ~10–30× smaller than a comparable dense transformer. With only 48 attention
+layers (of 88 total) and 2 KV heads, the KV budget at `--parallel 2 --ctx-size 32768` is ~0.38 GB
+— negligible against the 14.5 GB of VRAM headroom. `--parallel 2` is almost certainly viable and
+the investigation should focus on empirical measurement and documentation, not feasibility.
 
-The primary risk is not technical complexity but developer experience: the model download prerequisite (pre-populating the network volume before first deploy) must be clearly communicated or users will hit a cold-start timeout loop and assume the project is broken. The README and quickstart structure are as important as the deployment script itself.
+The critical pitfall is that slot priming currently covers only slot 0. With `--parallel 2`, slot 1
+will be unprimed and the second concurrent request may time out. This needs to be fixed as part of
+the parallel slots work. The other pitfalls (curl -N, ctx-size pool semantics, fresh-volume vs
+warm-worker distinction) are documentation and test methodology issues rather than code bugs.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack is minimal and purpose-built. RunPod Flash SDK (`>=1.8.1`) handles all serverless orchestration via Python objects (`Endpoint`, `GpuGroup.AMPERE_80`, `NetworkVolume`). The official llama.cpp Docker image (`ghcr.io/ggml-org/llama.cpp:server-cuda`, build `>=b4900`) provides the inference server. No custom image is needed.
+Testing stack for v0.2.0: `pytest` + `pytest-asyncio` (asyncio_mode=auto) + `httpx-sse>=0.4.3` +
+`openai>=1.30` + `python-dotenv`. For VRAM monitoring: `gpustat --watch 1` or `nvidia-smi`.
+Do NOT use `sseclient` (wrong transport), `respx`/`pytest-httpx` (mocking defeats E2E purpose),
+or `torch.memory_allocated()` (reports wrong process's VRAM).
 
 **Core technologies:**
-- `runpod-flash>=1.8.1`: Serverless GPU orchestration — `GpuGroup.AMPERE_80` targets A100 80GB; handles worker scaling, cold-start, HTTP proxy
-- `ghcr.io/ggml-org/llama.cpp:server-cuda` (build ≥ b4900): OpenAI-compatible inference server — pre-built with CUDA 12.4.0; supports GGUF natively
-- `huggingface_hub>=0.32.0`: Model download — `snapshot_download` with `allow_patterns="UD-Q4_K_XL/*"` downloads all 3 split files; uses fast `hf_xet` chunked downloads
-- Python 3.10–3.12: Runtime — 3.13+ not supported by runpod-flash
+- `pytest-asyncio`: Async test support — required for httpx streaming tests
+- `httpx-sse`: Spec-correct SSE parsing — `aconnect_sse()` / `aiter_sse()` handles edge cases
+- `openai`: Same client Claude Code uses — realistic E2E tests
+- `gpustat` / `nvidia-smi`: Only tools that report actual GPU driver VRAM
 
 ### Expected Features
 
-The project's features are nearly fully defined by the PROJECT.md requirements. Research confirmed all are feasible and well-understood:
+The v0.2.0 table stakes: documented E2E flow, verified streaming, investigated parallel slots,
+cleaned codebase. All four are required to remove the "not fully verified" README disclaimer.
 
-**Must have (table stakes for OSS developer tool):**
-- Single-file deployment script (`nemotron.py`) — users expect one command
-- OpenAI-compatible endpoint — mandatory for Claude Code / OpenCode / Mistral Vibe
-- Integration config snippets for all three target tools — each has different config file format
-- Cost breakdown with $20/month math — developers won't deploy without understanding cost
-- Scale-to-zero documentation — core serverless value proposition
+**Must have (table stakes for v0.2.0):**
+- E2E verification checklist (9-step: seed → deploy → cold → warmup → ready → non-stream → stream → models) — new users need this
+- Streaming verified with real clients (Claude Code + Mistral Vibe) — currently unverified
+- Parallel slots investigated (math says `--parallel 2` is viable; needs empirical confirmation)
+- Codebase cleanup (`download_model.py` removal, `get_cached_model_path()` removal)
 
-**Should have (differentiators):**
-- Network Volume model caching — eliminates 83.8 GB re-download; required for scale-to-zero to be practical
-- `--override-tensor "exps=CPU"` documented with explanation — non-obvious; this is expert knowledge
-- FlashBoot (`flashboot=True`) — snapshot cold starts; easy win
-- `idle_timeout` tuning guide — reduces billing for short sessions
-- Explicit `execution_timeout=1800` with rationale — prevents 120B response truncation
+**Should have:**
+- Context window vs parallel trade-off table in README
+- `--parallel 2` slot priming fix (prime all N slots, not just slot 0)
 
-**Anti-features to avoid:**
-- vLLM/FP8 path — exceeds budget and hardware requirements
-- Multi-user deployment, web UI, other models — scope creep per PROJECT.md
+**Defer:**
+- `--parallel 4` investigation — reduces ctx-size below user expectations; not worth the tradeoff
+- KV cache quantization — not needed; 14.5 GB headroom is ample at `--parallel 2`
 
 ### Architecture Approach
 
-Two-tier architecture: `nemotron.py` (local, declarative config) + RunPod worker running llama-server (remote, handles all inference). The RunPod proxy routes HTTPS traffic from clients directly to llama-server on port 8080. No custom handler code needed.
+The architecture is already correct for v0.2.0. FastAPI StreamingResponse + httpx.aiter_bytes()
+is the right SSE pass-through pattern. The `_slot_primed` flag is the right approach for
+NemotronH KV cache init — it just needs to prime all N slots when `--parallel N > 1`.
 
 **Major components:**
-1. `nemotron.py` — declares `Endpoint` with `GpuGroup.AMPERE_80`, `NetworkVolume(size=100)`, `flashboot=True`, `execution_timeout=1800`
-2. `download_model.py` — one-time network volume seeding via `snapshot_download`
-3. llama-server — runs inside the official Docker image; loads from `/runpod-volume/models/nemotron/`; exposes `/v1/chat/completions` on port 8080
-4. README — quickstart, three integration guides, cost breakdown, known limitations
+1. RunPod Flash LB — HTTP proxy, passes SSE through (`X-Accel-Buffering: no` is critical)
+2. FastAPI worker — `StreamingResponse` + `httpx.AsyncClient` streaming proxy
+3. llama-server — `--parallel N --ctx-size C` where C = N × target_ctx_per_slot
+4. `_slot_primed` flag — must send N warmup requests for N parallel slots
 
 ### Critical Pitfalls
 
-1. **UD-Q4_K_XL fails on old llama.cpp** — must use build ≥ b4900 (PR #20411); pin the Docker image tag
-2. **Cold start timeout loop** — 83.8 GB download exceeds RunPod's ~7-min worker init; network volume must be pre-populated before first deploy; this is the #1 developer experience failure mode
-3. **VRAM OOM at context > 8192** — `--override-tensor "exps=CPU"` is mandatory, not optional; never omit `-c 8192` cap
-4. **HF_TOKEN exposure** — must use `os.environ["HF_TOKEN"]` + RunPod Secrets, never hardcode
-5. **Execution timeout** — default 600s insufficient for 120B model; set `execution_timeout=1800`
-6. **Billing starts at worker init** — cold start overhead ~$0.14 per start; document `idle_timeout` tuning
+1. **Slot 0 only priming** — current `_slot_primed` sends one warmup request; `--parallel 2` means slot 1 unprimed → second concurrent request times out. Fix: send N concurrent warmup requests.
+2. **--ctx-size is a pool** — `--parallel 2 --ctx-size 32768` gives each slot 16K context. Set `--ctx-size = N × target_ctx`. Document this trade-off explicitly.
+3. **Fresh volume vs warm worker** — testing a warm worker restart masks cold start bugs. True E2E requires a clean volume.
+4. **curl -N omitted** — streaming tests without `--no-buffer` make streaming look broken. Always use `curl -N`.
+5. **RunPod 600s LB timeout** — hard platform limit; affects only very long non-streaming requests. Document in README.
+
+---
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+### Phase 1: E2E Verification
+**Rationale:** Most blocking — keeps the "not fully verified" disclaimer in README. New users can't trust the repo until this is done.
+**Delivers:** Verified 9-step cold-start-to-inference flow; README disclaimer removed; cold start timing documented.
+**Addresses:** E2E verification, cold start documentation
+**Avoids:** Pitfall 3 (warm worker masking cold start bugs) — must test on fresh/clean volume
 
-### Phase 1: Core Deployment Script
-**Rationale:** This is the entire product for most users — get it working and correct first.
-**Delivers:** `nemotron.py` + `download_model.py` that deploy successfully
-**Addresses:** Single-file deployment, OpenAI-compatible endpoint, network volume caching, FlashBoot, all critical llama-server flags
-**Avoids:** Cold start loop (network volume + download script), VRAM OOM (correct flags), execution timeout (1800s), HF_TOKEN exposure (os.environ)
+### Phase 2: Parallel Slots Investigation + Fix
+**Rationale:** Math says `--parallel 2` is viable (0.38 GB KV vs 14.5 GB headroom). Needs empirical measurement and slot priming fix.
+**Delivers:** `--parallel 2` either ships (with fix) or is ruled out with documented reason; trade-off table in README.
+**Implements:** Slot priming for N slots (fix `_slot_primed` to send N warmup requests)
+**Avoids:** Pitfall 1 (NemotronH SSM state multiplication), Pitfall 2 (ctx-size pool semantics), Pitfall 3 (slot 0 only primed)
 
-### Phase 2: Integration Guides
-**Rationale:** The endpoint is useless without knowing how to point each tool at it.
-**Delivers:** Tested config snippets for Claude Code, OpenCode, Mistral Vibe
-**Uses:** RunPod proxy URL format `https://api.runpod.ai/v2/{id}/openai/v1`
-**Implements:** Three separate config file formats; client timeout documentation
+### Phase 3: Streaming E2E Verification + Docs
+**Rationale:** Streaming works per code review but is untested with real clients (Claude Code + Mistral Vibe).
+**Delivers:** Streaming verified end-to-end; curl examples with `-N` in README; integration snippets updated.
+**Uses:** `httpx-sse`, `openai` SDK for tests; `curl -N` examples in docs
+**Avoids:** Pitfall 4 (curl -N omitted), Pitfall 7 (proxy buffering under parallel load)
 
-### Phase 3: README + Cost Documentation
-**Rationale:** OSS success depends on the README. The quickstart must work in <5 minutes with no prior RunPod experience.
-**Delivers:** Complete README with quickstart, prerequisites, cost table, known limitations, EU-RO-1 note
-**Avoids:** User abandonment due to undocumented cold start; billing surprises; community GGUF caveat documented
+### Phase 4: Codebase Cleanup
+**Rationale:** Remove dead code that confuses new users. `download_model.py` is superseded by `python nemotron.py seed`. `get_cached_model_path()` is dormant.
+**Delivers:** Clean, minimal codebase; no stale files; stale comments fixed.
+**Avoids:** New user confusion; future maintenance of dead code
 
 ### Phase Ordering Rationale
 
-- Phase 1 before Phase 2: Can't test integrations without a working deployment
-- Phase 3 is continuous but finalized last: README evolves as Phase 1/2 decisions solidify
-- Each phase is small enough to execute in a single context window — no phase needs splitting
+- E2E first because it's the blocker for removing the disclaimer — most impactful for "stranger can use this"
+- Parallel slots second because it requires E2E to be working (you need a clean inference path to test concurrency)
+- Streaming third because it depends on E2E and potentially parallel slots being stable
+- Cleanup last — safe to do anytime, but better after code changes settle
 
 ### Research Flags
 
+Phases likely needing deeper research during planning:
+- **Phase 2 (Parallel Slots):** May need llama.cpp issue research on NemotronH SSM state per slot; empirical measurement required
+
 Phases with standard patterns (skip research-phase):
-- **Phase 1:** Core APIs are well-documented; runpod-flash SDK and llama-server flags are fully researched
-- **Phase 2:** Integration config formats for all three tools are documented and stable
-- **Phase 3:** README writing; no research needed
+- **Phase 1 (E2E):** Standard smoke test methodology
+- **Phase 3 (Streaming):** Standard SSE testing patterns; already documented in FEATURES.md
+- **Phase 4 (Cleanup):** Straightforward file removal; no research needed
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
-|------|------------|-------|
-| Stack | HIGH | Verified against official RunPod Flash docs, llama.cpp docs, HuggingFace model page |
-| Features | HIGH | All requirements from PROJECT.md confirmed feasible; no unknowns |
-| Architecture | HIGH | Two known-good reference implementations found (runpod/flash-examples, stanchino/runpod-llama.cpp) |
-| Pitfalls | HIGH | UD-Q4_K_XL bug confirmed from HuggingFace model discussion; cold start math verified; billing model documented |
+|------|-----------|-------|
+| Stack | HIGH | pytest-asyncio + httpx-sse + openai SDK are well-documented standard choices |
+| Features | HIGH | KV cache math verified from model config.json; streaming protocol from llama.cpp docs |
+| Architecture | HIGH | Parallel slot memory math from actual Nemotron-3-Super config (48 attn layers, 2 KV heads); confirmed by llama.cpp discussions |
+| Pitfalls | HIGH (llama.cpp), MEDIUM (RunPod-specific) | llama.cpp issues verified; RunPod 600s timeout and SDK routing bug from community reports |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Actual token throughput on A100 with CPU expert offloading:** ~14 t/s is community-reported; actual production throughput should be measured in Phase 1 verification
-- **FlashBoot cold start time with network volume:** Estimated 2–3 min; measure in Phase 1 to document accurately
-- **OpenCode exact config schema:** May have changed recently; verify against current OpenCode repo during Phase 2
+- **NemotronH SSM recurrent state per parallel slot:** Math says ~200MB/slot is not a problem, but empirical VRAM measurement during Phase 2 should confirm this. The architecture agent notes llama.cpp issue #19552 / PR #19559 for NemotronH SSM slot allocation.
+- **RunPod 600s LB timeout:** Community reports, not official docs. Treat as informational; document defensively.
+- **Fresh volume E2E:** The actual cold start timing from a truly fresh volume (no cached binary) has not been timed recently. Seed phase may be faster now with binary caching. Measure during Phase 1.
+
+---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `github.com/runpod/flash` — RunPod Flash SDK API, GpuGroup, NetworkVolume, Endpoint params
-- `docs.runpod.io/flash/` — Custom Docker image patterns, execution_timeout, idle_timeout
-- `github.com/ggml-org/llama.cpp` — Server CLI flags, Docker image registry
-- `huggingface.co/unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF` — Model sizes, quant options, PR #20411 bug fix
-- `developer.nvidia.com/blog/introducing-nemotron-3-super` — Architecture facts, recommended sampling params
+- llama.cpp server README — `--parallel`, `--ctx-size`, `--cont-batching` flags
+- llama.cpp discussion #4130 — unified KV cache across slots; ctx-size is total pool
+- Nemotron-3-Super HuggingFace model card — 48 attention layers, 2 KV heads, head_dim 128
+- httpx-sse PyPI — `aconnect_sse`, `aiter_sse` API
+- FastAPI StreamingResponse docs — SSE implementation
 
 ### Secondary (MEDIUM confidence)
-- `huggingface.co/blog/Doctor-Shotgun/llamacpp-moe-offload-guide` — `--override-tensor exps=CPU` pattern
-- `github.com/ggml-org/llama.cpp/discussions/15396` — 120B on 80GB flag recommendations
-- `carteakey.dev/blog/optimizing-gpt-oss-120b-local-inference/` — `--no-mmap`, `GGML_CUDA_GRAPH_OPT=1`
-- `github.com/stanchino/runpod-llama.cpp` — Reference implementation of RunPod + llama.cpp deployment
+- llama.cpp discussion #18308 — diminishing returns past 4 parallel slots
+- llama.cpp issue #19552 / PR #19559 — NemotronH SSM slot allocation
+- RunPod community — 600s LB timeout, SDK routing bug in 1.7.11–1.7.12
+
+### Tertiary (LOW confidence)
+- RunPod Flash E2E verification patterns — no official docs found; derived from general serverless LLM deployment patterns
 
 ---
-*Research completed: 2026-03-20*
+*Research completed: 2026-03-22*
 *Ready for roadmap: yes*
