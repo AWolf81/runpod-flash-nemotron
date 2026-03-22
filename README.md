@@ -6,12 +6,12 @@ Run NVIDIA Nemotron-3-Super-120B-A12B GGUF on RunPod Flash with a shared network
 
 - One-file RunPod Flash deployment in [nemotron.py](nemotron.py)
 - One-time remote seeding job that downloads the model and builds `llama-server` on the volume: `python nemotron.py seed`
-- OpenAI-compatible `llama-server` endpoint on RTX Pro 6000 Blackwell (97 GB VRAM)
+- OpenAI-compatible `llama-server` endpoint on RTX Pro 6000 Blackwell (96 GB VRAM)
 - Copy-paste integration guides for Claude Code, OpenCode, and Mistral Vibe in [docs/integrations](docs/integrations)
 
 ## Performance
 
-Benchmarked over 19 consecutive requests (300 output tokens, 26 prompt tokens) on RTX Pro 6000 Blackwell (97 GB VRAM):
+Benchmarked over 19 consecutive requests (300 output tokens, 26 prompt tokens) on RTX Pro 6000 Blackwell (96 GB VRAM):
 
 | Metric | Mean | stdev | p50 | p99 |
 |--------|------|-------|-----|-----|

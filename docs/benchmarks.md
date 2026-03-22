@@ -135,7 +135,7 @@ boot** (scale-to-zero): no benefit — pages were never loaded on that instance.
 | Model weights (GPU layers) | ~60 GB VRAM |
 | KV cache (32768 ctx) | ~4–8 GB VRAM |
 | CUDA overhead | ~3–5 GB |
-| **Total VRAM used** | **~67–73 GB of 97 GB** |
+| **Total VRAM used** | **~67–73 GB of 96 GB** |
 | VRAM headroom | ~24–30 GB |
 
 ### Why --mlock Does Not Help Here
@@ -181,7 +181,7 @@ eviction of pages and could genuinely help repeat-start latency.
 
 | GPU | VRAM | RunPod Serverless Rate |
 |---|---|---|
-| RTX Pro 6000 Blackwell | 97 GB | **$1.69/hr** |
+| RTX Pro 6000 Blackwell | 96 GB | **$1.69/hr** |
 
 ### Per-Cold-Start Cost
 

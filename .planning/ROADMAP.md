@@ -103,7 +103,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 06-01: Benchmark cold start, measure volume throughput, evaluate --mlock
+- [x] 06-01: Benchmark cold start, measure volume throughput, evaluate --mlock
 
 ## Progress
 
@@ -117,4 +117,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 5 → 6 → 4
 | 3. README & Documentation | 2/2 | Complete | 2026-03-22 |
 | 4. Streaming Support | 0/1 | Planned | - |
 | 5. Model Caching | 1/1 | Complete | 2026-03-22 |
-| 6. Warmup Performance | 0/1 | Planned | - |
+| 6. Warmup Performance | 1/1 | Complete | 2026-03-22 |
