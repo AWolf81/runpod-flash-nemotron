@@ -5,7 +5,7 @@ Run NVIDIA Nemotron-3-Super-120B-A12B GGUF on RunPod Flash with a shared network
 ## What You Get
 
 - One-file RunPod Flash deployment in [nemotron.py](nemotron.py)
-- One-time remote model seeding job: `python nemotron.py seed`
+- One-time remote seeding job that downloads the model and builds `llama-server` on the volume: `python nemotron.py seed`
 - OpenAI-compatible `llama-server` endpoint on RTX Pro 6000 Blackwell (97 GB VRAM)
 - Copy-paste integration guides for Claude Code, OpenCode, and Mistral Vibe in [docs/integrations](docs/integrations)
 
@@ -33,15 +33,28 @@ export RUNPOD_API_KEY="rp_your_runpod_key"
 export HF_TOKEN="hf_your_huggingface_token"
 ```
 
-**2. Seed the model into the network volume:**
+**2. Seed the model and build `llama-server` into the network volume:**
 
 ```bash
-python nemotron.py seed
+HF_TOKEN=hf_... python nemotron.py seed
 ```
 
-This starts a temporary remote worker, downloads the GGUF from Hugging Face into the shared network volume at `/runpod-volume/models`, then exits. Only needs to run once per volume.
+This starts a temporary remote worker that:
+1. Builds `llama-server` from source and caches the binary to the volume
+2. Downloads the GGUF shards (~84 GB) from Hugging Face into the volume
 
-**Why seeding is necessary:** RunPod serverless workers are stateless — they boot from a fresh container every time. Without a persistent volume, every cold start would download 78 GiB from Hugging Face (~10–20 min), making the endpoint unusable. The network volume is attached to every worker on boot so the model is always available at a fixed path.
+Both steps are idempotent — re-running `seed` skips anything already present and returns immediately. Cold starts after seeding restore the binary from the volume and load the model into VRAM (~1–2 min), with no download or build step.
+
+**CLI options:**
+
+```bash
+python nemotron.py seed                          # skip if binary and model already present
+python nemotron.py seed --clean-binary           # force rebuild of llama-server (~10 min)
+python nemotron.py seed --clean-model            # re-download model (~84 GB)
+python nemotron.py seed --clean-binary --clean-model  # full rebuild + re-download
+```
+
+**Why seeding is necessary:** RunPod serverless workers are stateless — they boot from a fresh container every time. The network volume persists across workers, so the model and binary are available immediately on every cold start without re-downloading or recompiling.
 
 **Network volume cost:** ~$0.07/GB/month on RunPod, so the 100 GB volume costs approximately **$7/month** regardless of whether any workers are running. This is a fixed baseline cost on top of per-second GPU charges.
 
@@ -75,7 +88,7 @@ flash run --auto-provision
 curl http://localhost:8888/nemotron-super-120b/v1/models
 ```
 
-The URL pattern is `http://localhost:8888/<endpoint-name>/<route>`. This first request will block while the worker boots and loads the model (~5–10 min on first cold start while building llama-server, ~3–5 min on subsequent cold starts once the binary is cached to the volume).
+The URL pattern is `http://localhost:8888/<endpoint-name>/<route>`. This first request will block while the worker boots and loads the model (~5–10 min on first cold start while building llama-server, ~8–10 min on subsequent cold starts once the binary is cached to the volume).
 
 **Test inference:**
 
@@ -112,7 +125,7 @@ curl https://<your-endpoint-url>/health
 # → {"status": "warming_up"}     — llama-server process started, still loading model (~3-5 min)
 # → {"status": "cold"}           — worker up but warmup not triggered yet (call /warmup)
 # → {"status": "missing_binary"} — run /admin/install
-# → {"status": "missing_model"}  — run python nemotron.py seed
+# → {"status": "missing_model"}  — run HF_TOKEN=hf_... python nemotron.py seed
 ```
 
 ### Admin Endpoints
@@ -201,7 +214,7 @@ If a volume cache exists from a previous worker, this completes in seconds. Othe
 **Important:** do not offload layers to CPU — it explodes the compute buffer from ~282 MiB to ~2,500 MiB and causes CUDA OOM. Keep all layers on GPU and move the KV cache to RAM instead:
 
 ```bash
-# Loading takes 3–5 minutes. The bottleneck is reading 78 GiB of model
+# Loading takes 8–10 minutes. The bottleneck is reading 78 GiB of model
 # weights from the network volume (backed by S3) at ~0.4 GB/s into GPU VRAM.
 /app/llama-server \
   --model /runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf \
@@ -261,10 +274,10 @@ Output during a session:
 
 Cold start cost (model load from network volume into GPU VRAM):
 
-- **First cold start ever**: ~8–13 min — builds llama-server from source (~5–10 min) + loads 78 GiB model (~3–5 min). Binary is then cached to `/runpod-volume/cache/llama-server`.
-- **Subsequent cold starts**: ~3–5 min — restores binary from volume cache (seconds) + loads 78 GiB model (~3–5 min).
+- **First cold start ever**: ~13–20 min — builds llama-server from source (~5–10 min) + loads 78 GiB model (~8–10 min). Binary is then cached to `/runpod-volume/cache/llama-server`.
+- **Subsequent cold starts**: ~8–10 min — restores binary from volume cache (seconds) + loads 78 GiB model (~8–9 min).
 
-**Why not FlashBoot?** FlashBoot would snapshot the warm worker and restore it in ~10s on the next cold start — eliminating the 3–5 min wait. However, the Flash load balancer force-kills idle workers after ~5 minutes, before RunPod can write the snapshot. This makes FlashBoot unreliable for this setup and it is currently disabled.
+**Why not FlashBoot?** FlashBoot would snapshot the warm worker and restore it in ~10s on the next cold start — eliminating the 8–10 min wait. However, the Flash load balancer force-kills idle workers after ~5 minutes, before RunPod can write the snapshot. This makes FlashBoot unreliable for this setup and it is currently disabled.
 
 **Why always-on workers?** With `workers=(0,2)` and no active requests, the Flash LB scaler aggressively kills workers within ~5 minutes regardless of `idle_timeout`. Sending keepalive requests during model loading prevents premature shutdown, but once the model is warm you need at least 1 worker kept alive by the scaler. The warmup.sh script manages this by scaling to `workers=(1,2)` at session start and back to `workers=(0,2)` on Ctrl+C.
 
@@ -289,6 +302,41 @@ KV cache for the 8 attention layers at 128k context is ~781 MiB in RAM. The SSM 
 - **Fixed baseline**: network volume ~$7/month regardless of GPU usage
 - **Network volume**: 100 GB at ~$0.07/GB/month
 
+<details>
+<summary>Aside: running this model on your own hardware (March 2026 snapshot prices, no accuracy guarantee)</summary>
+
+The RTX Pro 6000 Blackwell (96 GB GDDR7) is the same GPU used on RunPod and fits in a standard full-tower desktop. It requires a 1600W ATX 3.0 PSU (600W TDP) and a workstation platform to support enough RAM.
+
+**Why you need a workstation platform:** Running an 84 GB GGUF with mmap keeps a copy of the model in system RAM as a page cache alongside the VRAM copy. Consumer platforms (AM5, LGA1851) max out at 192 GB — not enough. Threadripper PRO on WRX90 supports up to 2 TB DDR5 ECC.
+
+**Estimated build cost (March 2026):**
+
+| Component | Choice | ~Price |
+|-----------|--------|--------|
+| GPU | RTX PRO 6000 Blackwell 96GB (PNY) | $7,999 |
+| CPU | Threadripper PRO 9955WX (16-core Zen 5) | $1,649 |
+| Motherboard | ASUS Pro WS WRX90E-SAGE SE (EEB) | $1,247 |
+| RAM | 256GB DDR5 ECC RDIMM (8×32GB) | ~$3,500–4,500 |
+| NVMe | Samsung 990 PRO 4TB | $699 |
+| PSU | ASUS ROG Thor 1600W Titanium | $753 |
+| Case + cooler | Full-tower EEB + TR5 cooler | ~$400 |
+| **Total** | | **~$16,000–17,500** |
+
+RAM is the biggest wildcard — DDR5 RDIMM prices rose sharply in early 2026.
+
+**Break-even vs RunPod at $1.69/hr:**
+
+| Usage | RunPod/month | Break-even |
+|-------|-------------|-----------|
+| 100 hrs/month | $169 | ~8 years |
+| 200 hrs/month | $338 | ~4 years |
+| 400 hrs/month | $676 | ~2 years |
+| 24/7 | $1,217 | ~14 months |
+
+For occasional coding assistant use, RunPod is cheaper for 3–4 years. The hardware makes sense for heavy daily use (300+ hrs/month), data privacy requirements, or zero cold-start latency.
+
+</details>
+
 ## Known Limitations
 
 - **Live deployment not yet fully verified** — this repo is under active debugging. Core seeding and deployment flows work, but behavior on first cold start after a fresh volume may differ.
@@ -301,3 +349,16 @@ KV cache for the 8 attention layers at 128k context is ~781 MiB in RAM. The SSM 
 - Claude Code: [docs/integrations/claude-code.md](docs/integrations/claude-code.md)
 - OpenCode: [docs/integrations/opencode.md](docs/integrations/opencode.md)
 - Mistral Vibe: [docs/integrations/mistral-vibe.md](docs/integrations/mistral-vibe.md)
+
+### Open WebUI
+
+```bash
+WEBUI_AUTH=False \
+AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST=60 \
+AIOHTTP_CLIENT_TIMEOUT=300 \
+OPENAI_API_KEY=$RUNPOD_API_KEY \
+OPENAI_API_BASE_URL=https://<RUNPOD_ID>.api.runpod.ai/v1 \
+open-webui serve
+```
+
+Replace `<RUNPOD_ID>` with your endpoint ID from the RunPod console. The extended timeouts are required because model list and completion requests can take longer than the default limits on a 120B model.

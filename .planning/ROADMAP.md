@@ -10,7 +10,7 @@ Three phases take this from nothing to a complete OSS developer tool: first buil
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [x] **Phase 1: Core Deployment Script** - nemotron.py + download_model.py that successfully deploy Nemotron-3-Super on RunPod A100 80GB
+- [x] **Phase 1: Core Deployment Script** - nemotron.py seeds a shared volume and deploys Nemotron-3-Super on RunPod A100 80GB
 - [ ] **Phase 2: Integration Guides** - Tested config snippets for Claude Code, OpenCode, and Mistral Vibe
 - [ ] **Phase 3: README & Documentation** - Complete quickstart README with cost breakdown and known limitations
 
@@ -22,11 +22,11 @@ Three phases take this from nothing to a complete OSS developer tool: first buil
 **Requirements**: DEPL-01, DEPL-02, DEPL-03, DEPL-04, DEPL-05, DEPL-06, DEPL-07
 **Success Criteria** (what must be TRUE):
   1. Developer can run `flash deploy` with `nemotron.py` and get a live RunPod endpoint URL
-  2. Developer can pre-populate the network volume with `download_model.py` before first deploy (prevents cold-start timeout loop)
+  2. Developer can run a one-time remote seed job with `python nemotron.py seed` before first deploy to populate the network volume (prevents cold-start timeout loop)
   3. llama-server starts with correct flags (`-ngl 99 --override-tensor "exps=CPU" -c 32768 -fa --no-mmap -np 1 --cont-batching`) and responds to `/v1/chat/completions` requests on port 8080
   4. `execution_timeout=1800` and `idle_timeout` tuning are configured and documented inline
 **Research**: Unlikely (stack fully researched; all RunPod Flash SDK params, llama-server flags, and HuggingFace download patterns confirmed at HIGH confidence)
-**Plans**: TBD
+**Plans**: In progress - README draft exists but needs reconciliation to current code
 
 Plans:
 - [x] 01-01: Write nemotron.py (Endpoint, GpuGroup.AMPERE_80, NetworkVolume, FlashBoot, llama-server CMD)
@@ -44,7 +44,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 02-01: Write integration config snippets for Claude Code, OpenCode, and Mistral Vibe
+- [x] 02-01: Write integration config snippets for Claude Code, OpenCode, and Mistral Vibe
 
 ### Phase 3: README & Documentation
 **Goal**: Complete README enabling a first-time user to deploy and integrate in under 5 minutes with no prior RunPod experience
@@ -59,16 +59,47 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 03-01: Write README.md with quickstart, integration links, cost breakdown, and known limitations
+- [ ] 03-01: Reconcile README.md to current implementation and deployment flow
 - [ ] 03-02: Add MIT LICENSE file
+
+### Phase 4: Streaming Support
+**Goal**: Enable SSE streaming through the Flash LB so clients receive tokens as they are generated, eliminating the perceived wait for long responses
+**Depends on**: Phase 3
+**Requirements**: STRM-01, STRM-02, STRM-03
+**Success Criteria** (what must be TRUE):
+  1. Flash LB SSE pass-through is confirmed working (or workaround identified)
+  2. `stream: true` requests to `/v1/chat/completions` return `text/event-stream` SSE chunks
+  3. Open WebUI, Claude Code, and OpenCode receive streamed tokens correctly
+**Research**: Required — Flash LB SSE support is unconfirmed; need to test whether chunked transfer encoding passes through or is buffered
+**Plans**: TBD
+
+Plans:
+- [ ] 04-01: Investigate Flash LB SSE support and implement StreamingResponse proxy
+
+### Phase 5: Model Caching
+**Goal**: Replace the network volume model storage with RunPod's native cached models feature to eliminate the 8–10 min cold start and the $7/month fixed volume cost
+**Depends on**: Phase 3
+**Requirements**: CACHE-01, CACHE-02, CACHE-03, CACHE-04
+**Success Criteria** (what must be TRUE):
+  1. Cached model host is used on cold start — model loads in seconds, not 8–10 min
+  2. Worker resolves the cached model path dynamically at runtime (hash-based snapshot dir)
+  3. Network volume is no longer required for model storage (seed flow and volume can be removed or repurposed for binary cache only)
+  4. Selective quant download confirmed — only `UD-Q4_K_XL` files cached, not full repo
+**Research**: Required — verify whether RunPod cached models supports selective quant patterns for GGUF repos with multiple quantizations; confirm cached path resolution approach
+**Plans**: TBD
+
+Plans:
+- [x] 05-01: Binary caching on network volume — seed builds llama-server, inference workers restore from volume (cached model approach abandoned; RunPod has no selective quant filtering)
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Deployment Script | 2/2 | Complete | 2026-03-20 |
-| 2. Integration Guides | 0/1 | Not started | - |
-| 3. README & Documentation | 0/2 | Not started | - |
+| 2. Integration Guides | 1/1 | Complete | 2026-03-20 |
+| 3. README & Documentation | 2/2 | Complete | 2026-03-22 |
+| 4. Streaming Support | 0/1 | Planned | - |
+| 5. Model Caching | 1/1 | Complete | 2026-03-22 |

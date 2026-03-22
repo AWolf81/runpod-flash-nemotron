@@ -1,67 +1,49 @@
 ---
 plan: 05-01
 phase: 05-model-caching
-status: checkpoint
+status: complete
 completed: 2026-03-22
 commit: bc3cf2a
-checkpoint: human-action
 ---
 
 # Summary: 05-01 Dynamic Model Path Resolver
 
 ## What Was Done
 
-### Task 1: Add CACHED_REPO_ID config and get_cached_model_path() resolver (complete)
+Task 1 (auto) completed as planned — added `get_cached_model_path()`, `CACHED_REPO_ID`, and `CACHED_CACHE_BASE` to `nemotron.py`.
 
-Added to `nemotron.py` immediately after `GPU_INFERENCE_ENDPOINT_NAME`:
+Task 2 (checkpoint: private HF repo) was **abandoned** after investigation revealed:
+- RunPod cached models downloads all files in a repo — no selective quant filtering
+- The unsloth repo is 2.01 TB across 23 quants; pointing cached models at it would download everything
+- The workaround (private single-quant repo) requires uploading 83.8 GB to HF — not worth it when the network volume already serves the model instantly on cold start
 
-- `CACHED_REPO_ID = ""` — placeholder for the user's private single-quant HF repo ID
-- `CACHED_CACHE_BASE = "/runpod-volume/huggingface-cache/hub"` — RunPod cached model mount base
-- `get_cached_model_path() -> str | None` — reads `refs/main` for the commit hash, falls back to
-  listing `snapshots/` if `refs/main` is absent, returns `None` when `CACHED_REPO_ID` is empty or
-  the cache directory does not exist
+## Key Discovery
 
-Existing constants (`VOLUME_NAME`, `MODEL_DIR`, `MODEL_FILENAME`, `MODEL_PATH`) and all call sites
-are unchanged. Network volume path remains the active fallback.
+**The network volume already eliminates the model download cold start.** Volume files are available immediately on worker boot — no sync, no download. The original 8-10 min cold start assumption was wrong; model files were never the bottleneck.
 
-Verification passed:
-- `python -m py_compile nemotron.py` — exit 0
-- `python -c "import nemotron; print('get_cached_model_path' in dir(nemotron))"` — True
+The actual cold start costs are:
+1. **llama-server binary**: build from source (~5-10 min) — now fixed by binary caching on volume
+2. **Model load into VRAM**: mmap over network volume (~3-6 min) — open issue, see Known Issues
 
-## Checkpoint: Awaiting Human Action
+## Deviations
 
-Task 2 is a `checkpoint:human-action` gate. Execution is paused until the user:
-
-1. Creates a **private** HuggingFace repository containing only the 3 UD-Q4_K_XL shard files
-   (~83.8 GB total).
-   - URL: https://huggingface.co/new
-   - Settings: Type = Model, Visibility = Private
-
-2. Uploads the 3 GGUF shards:
-   ```bash
-   pip install "huggingface_hub>=0.32.0"
-   huggingface-cli login --token $HF_TOKEN
-   huggingface-cli upload your-org/nemotron-q4-xl \
-     /runpod-volume/models/UD-Q4_K_XL/ \
-     --repo-type model
-   ```
-
-3. Verifies the upload and provides the repo ID (e.g. `your-username/nemotron-q4-xl`).
-
-**Why not the unsloth repo directly:** RunPod cached models downloads all files in a repo — the
-unsloth repo is 2.01 TB with 23 quantization variants. The private single-quant repo is ~83.8 GB.
-
-## Resume Signal
-
-Paste your repo ID (e.g. `myname/nemotron-q4-xl`) to continue to Plan 02, which will:
-- Set `CACHED_REPO_ID` to your actual repo ID
-- Update all hard-coded `model_path` strings in `chat_completions`, `warmup`, `gpu_health`,
-  and `make_seed_runner` to use `get_cached_model_path()`
+Phase 5 pivoted from "RunPod cached models migration" to "binary caching on network volume":
+- `get_cached_model_path()` added but `CACHED_REPO_ID` left empty (feature dormant until RunPod ships selective quant support)
+- Seed runner overhauled: now builds llama-server on the volume during seed, same GPU type as inference workers
+- Multi-arch CUDA build: `sm_90;100;120` (H200/B200/RTX Pro 6000 Blackwell)
+- `--clean-binary` and `--clean-model` CLI flags added to seed
+- `.env` auto-loading added to seed
+- `--no-mmap` attempted but caused OOM (CUDA buffer pre-allocation exhausts 97GB VRAM); reverted
+- `--no-kv-offload` removed — was causing OOM by forcing KV cache into VRAM alongside model weights
 
 ## Files Modified
 
-- `nemotron.py` — added `CACHED_REPO_ID`, `CACHED_CACHE_BASE`, and `get_cached_model_path()`
+- `nemotron.py` — `get_cached_model_path()`, seed overhaul, flag cleanup, `.env` loading, health endpoint improvements
+- `patches/install_llama_server.sh` — multi-arch CUDA build (`sm_90;100;120`), GPU/arch coupling comment
+- `README.md` — seed CLI docs, local hardware cost aside (March 2026 snapshot)
+- `warmup.sh` — improved health polling (502/503 → `starting` status)
 
-## Deviations from Plan
+## Known Issues
 
-None. The function matches the plan specification exactly.
+- **VRAM load time (~3-6 min)**: mmap over network volume is slow. `--no-mmap` OOMs because CUDA pre-allocates the full buffer (79GB) upfront before streaming tensors, exceeding 97GB VRAM. Root cause: KV cache + model weights + CUDA overhead > 97GB. No clean fix without either more VRAM or a different serving approach.
+- **Benchmark needed**: idle-to-ready time with warm binary (post-seed) not yet measured precisely — aborted at 6 min during testing.
