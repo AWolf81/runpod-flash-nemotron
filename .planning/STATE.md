@@ -9,9 +9,9 @@ See: .planning/PROJECT.md (updated 2026-03-20)
 
 ## Current Position
 
-Phase: 6 of 6 (Warmup Performance) — Complete
+Phase: 4 of 6 (Streaming Support) — Complete
 Status: All phases done
-Last activity: 2026-03-22 — Phase 6 plan 1 complete; benchmarks documented; slot priming fix added; --mlock evaluated and ruled out
+Last activity: 2026-03-22 — Phase 4 plan 1 complete; SSE streaming via StreamingResponse confirmed working; OpenCode and Open WebUI tested live
 
 Progress: ██████████ 100%
 
@@ -31,6 +31,7 @@ Progress: ██████████ 100%
 | 03-readme-documentation | 2/2 | ~2 min | ~1 min |
 | 05-model-caching | 1/3 (2 skipped) | ~60 min | — |
 | 06-warmup-performance | 1/1 | ~5 min | ~5 min |
+| 04-streaming-support | 1/1 | ~10 min | ~10 min |
 
 ## Accumulated Context
 
@@ -48,6 +49,7 @@ Progress: ██████████ 100%
 | 05 | --no-kv-offload removed | Was causing OOM — forces KV cache into VRAM alongside 79GB model weights, exceeding 97GB |
 | 05 | --no-mmap reverted | OOM: CUDA pre-allocates full 79GB buffer before streaming tensors; mmap stays |
 | 05 | get_cached_model_path() dormant (CACHED_REPO_ID="") | Feature ready for when RunPod ships selective quant support |
+| 04 | FastAPI StreamingResponse passes through Flash LB unchanged | Prior "SSE not supported" comment was unverified assumption; no workaround needed |
 
 ### Pending Todos
 
@@ -60,5 +62,5 @@ _(none)_
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: Phase 6 plan 1 complete; docs/benchmarks.md written; slot priming fix committed; STATE.md updated
+Stopped at: Phase 4 plan 1 complete; SSE streaming implemented and live-tested; STATE.md updated
 Resume file: None
