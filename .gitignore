@@ -1,0 +1,6 @@
+.flash/
+.env
+.webui_secret_key
+__pycache__/
+*.pyc
+.runpod/

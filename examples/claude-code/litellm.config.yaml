@@ -1,0 +1,9 @@
+model_list:
+  - model_name: claude-code-runpod
+    litellm_params:
+      model: openai/${RUNPOD_MODEL}
+      api_base: ${RUNPOD_BASE_URL}
+      api_key: ${RUNPOD_API_KEY}
+
+general_settings:
+  master_key: local-dev-token

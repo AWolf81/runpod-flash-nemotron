@@ -1,0 +1,16 @@
+[env]
+RUNPOD_BASE_URL = "https://api.runpod.example/v1"
+
+[[providers]]
+name = "runpod"
+backend = "generic"
+api_base = "${RUNPOD_BASE_URL}"
+api_key_env_var = "RUNPOD_API_KEY"
+api_style = "openai"
+
+[[models]]
+name = "nemotron-runpod"
+provider = "runpod"
+model_name = "${RUNPOD_MODEL}"
+
+active_model = "nemotron-runpod"

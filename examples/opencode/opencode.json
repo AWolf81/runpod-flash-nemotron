@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "runpod": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "RunPod Nemotron",
+      "options": {
+        "baseURL": "https://api.runpod.example/v1",
+        "apiKey": "{env:RUNPOD_API_KEY}"
+      },
+      "models": {
+        "nemotron-runpod": {
+          "name": "{env:RUNPOD_MODEL}"
+        }
+      }
+    }
+  },
+  "model": "runpod:nemotron-runpod"
+}
