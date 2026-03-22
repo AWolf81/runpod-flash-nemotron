@@ -26,17 +26,37 @@ preload_model() {
     # ~200 MB/s. By pre-reading all shards into RAM first, CUDA DMA hits page cache at
     # ~50 GB/s instead of the network volume, cutting VRAM load time significantly.
     #
-    # Three shards read concurrently → total preload time ≈ largest shard / volume_throughput
-    # rather than sum(all shards) / throughput. Each cat process uses O(1) memory (kernel
-    # page cache is shared), so this doesn't exhaust RAM.
-    echo "==> Pre-loading model shards into page cache (parallel reads)..."
+    # Strategy: each shard is split into STREAMS_PER_SHARD concurrent dd readers at
+    # different offsets. More parallel readers = more concurrent I/O against the volume,
+    # saturating its IOPS/throughput headroom that a single sequential reader leaves idle.
+    # bs=128M reduces syscall overhead vs cat's default 128K blocks.
+    # Each dd process uses O(1) memory — page cache is shared across all readers.
+    local STREAMS_PER_SHARD=4
+    local BLOCK_SIZE_MB=128
+    local BLOCK_SIZE=$((BLOCK_SIZE_MB * 1024 * 1024))
+
+    echo "==> Pre-loading model shards into page cache (${STREAMS_PER_SHARD} streams/shard, bs=${BLOCK_SIZE_MB}M)..."
+
     local pids=()
     for shard in "${MODEL_DIR}"/*.gguf; do
         [[ -f "${shard}" ]] || continue
-        cat "${shard}" > /dev/null &
-        pids+=($!)
-        echo "    reading $(basename "${shard}") (pid $!)"
+        local shard_bytes
+        shard_bytes=$(stat -c%s "${shard}")
+        local total_blocks=$(( (shard_bytes + BLOCK_SIZE - 1) / BLOCK_SIZE ))
+        local blocks_per_stream=$(( (total_blocks + STREAMS_PER_SHARD - 1) / STREAMS_PER_SHARD ))
+        local name
+        name=$(basename "${shard}")
+        echo "    ${name}: ${total_blocks} blocks × ${BLOCK_SIZE_MB}M, ${STREAMS_PER_SHARD} streams"
+
+        for (( s=0; s<STREAMS_PER_SHARD; s++ )); do
+            local skip=$(( s * blocks_per_stream ))
+            local count=${blocks_per_stream}
+            # Last stream may have a partial block — dd handles this gracefully (reads until EOF)
+            dd if="${shard}" of=/dev/null bs="${BLOCK_SIZE}" skip="${skip}" count="${count}" 2>/dev/null &
+            pids+=($!)
+        done
     done
+
     if [[ ${#pids[@]} -eq 0 ]]; then
         echo "    WARNING: no .gguf shards found in ${MODEL_DIR}, skipping preload"
         return
