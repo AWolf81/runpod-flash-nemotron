@@ -9,6 +9,18 @@ Run NVIDIA Nemotron-3-Super-120B-A12B GGUF on RunPod Flash with a shared network
 - OpenAI-compatible `llama-server` endpoint on RTX Pro 6000 Blackwell (97 GB VRAM)
 - Copy-paste integration guides for Claude Code, OpenCode, and Mistral Vibe in [docs/integrations](docs/integrations)
 
+## Performance
+
+Benchmarked over 20 consecutive requests (300 output tokens, ~26 prompt tokens) on RTX Pro 6000 Blackwell (97 GB VRAM):
+
+| Metric | Value |
+|--------|-------|
+| Generation speed | **81.2 tok/s** (stdev 0.2) |
+| Prompt processing | **360.6 tok/s** (stdev 0.8) |
+| Generation latency (300 tokens) | 3.7 s (p99: 3.7 s) |
+
+Variance is negligible — the GPU is fully saturated and consistent. For reference, most 70B model deployments run 40–60 tok/s. Nemotron-Super-120B is a sparse MoE with only 12B active parameters, which explains the speed despite the 120B parameter count.
+
 ## Prerequisites
 
 - RunPod account with Flash access
@@ -43,7 +55,7 @@ This starts a temporary remote worker that:
 1. Builds `llama-server` from source and caches the binary to the volume
 2. Downloads the GGUF shards (~84 GB) from Hugging Face into the volume
 
-Both steps are idempotent — re-running `seed` skips anything already present and returns immediately. Cold starts after seeding restore the binary from the volume and load the model into VRAM (~1–2 min), with no download or build step.
+Both steps are idempotent — re-running `seed` skips anything already present and returns immediately. Cold starts after seeding restore the binary from the volume and load the model into VRAM (~10–16 min), with no download or build step. See [Cold Starts](#cold-starts-and-flashboot-limitation) for details.
 
 **CLI options:**
 
@@ -85,15 +97,15 @@ flash run --auto-provision
 **Trigger provisioning** by hitting any endpoint — the worker is not spun up until the first request:
 
 ```bash
-curl http://localhost:8888/nemotron-super-120b/v1/models
+curl http://localhost:8888/nemotron/v1/models
 ```
 
-The URL pattern is `http://localhost:8888/<endpoint-name>/<route>`. This first request will block while the worker boots and loads the model (~5–10 min on first cold start while building llama-server, ~8–10 min on subsequent cold starts once the binary is cached to the volume).
+The URL pattern is `http://localhost:8888/<function-name>/<route>`. This first request will block while the worker boots and loads the model (~20–30 min on first cold start while building llama-server, ~10–16 min on subsequent cold starts once the binary is cached and the preload optimization is in effect).
 
 **Test inference:**
 
 ```bash
-curl http://localhost:8888/nemotron-super-120b/v1/chat/completions \
+curl http://localhost:8888/nemotron/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "Hello"}], "max_tokens": 50}'
 ```
@@ -146,7 +158,7 @@ curl -X POST https://<your-endpoint-url>/admin/install \
 
 1. Go to [console.runpod.io](https://console.runpod.io)
 2. Navigate to **Serverless** in the left sidebar
-3. Find **nemotron-super-120b** (the endpoint provisioned by `flash run` or `flash deploy`)
+3. Find **nemotron** (the endpoint provisioned by `flash run` or `flash deploy`)
 4. Click **Workers** tab
 5. Find a worker with status **Running** and click it
 6. In the side panel, click the **Connect** tab
@@ -270,12 +282,44 @@ Output during a session:
 
 **Do not close this terminal while working.** When you press Ctrl+C, the endpoint scales to 0 and no GPU is allocated until you run warmup.sh again.
 
+## Benchmarking
+
+Run [scripts/bench.sh](scripts/bench.sh) against a live endpoint to measure generation speed and latency:
+
+```bash
+bash scripts/bench.sh          # 20 requests, loads RUNPOD_API_KEY from .env
+bash scripts/bench.sh 40       # 40 requests
+```
+
+Output per run (to stderr) + aggregate statistics (to stdout):
+
+```
+Benchmarking https://hf1ui3wrdsa31u.api.runpod.ai
+  n=20
+
+  run   1/20  gen=81.3 tok/s
+  run   2/20  gen=81.1 tok/s
+  ...
+
+=== Benchmark Results (n=20) ===
+
+Generation speed (n=20):
+  mean=81.2 tok/s  stdev=0.2 tok/s
+  min=80.8 tok/s  p50=81.2 tok/s  p90=81.5 tok/s  p99=81.6 tok/s  max=81.6 tok/s
+...
+```
+
+The script reads `RUNPOD_API_KEY` from the environment or `.env`. Override the endpoint with `NEMOTRON_ENDPOINT=https://...`.
+
 ## Cold Starts and FlashBoot Limitation
 
 Cold start cost (model load from network volume into GPU VRAM):
 
-- **First cold start ever**: ~13–20 min — builds llama-server from source (~5–10 min) + loads 78 GiB model (~8–10 min). Binary is then cached to `/runpod-volume/cache/llama-server`.
-- **Subsequent cold starts**: ~8–10 min — restores binary from volume cache (seconds) + loads 78 GiB model (~8–9 min).
+- **First cold start ever**: ~20–30 min — builds llama-server from source (~5–10 min) + loads 79 GiB model. Binary is then cached to `/runpod-volume/cache/llama-server`.
+- **Subsequent cold starts (before preload optimization)**: ~16m30s — restores binary from volume cache (seconds) + reads 79 GiB from network volume into page cache + transfers ~60 GiB of GPU weights to VRAM over PCIe.
+- **Subsequent cold starts (with preload optimization)**: TBD — `install_llama_server.sh` now pre-reads all GGUF shards in parallel into Linux page cache before starting llama-server, so CUDA DMA hits RAM at ~50 GB/s instead of the network volume at ~200 MB/s. The volume read and CUDA transfer now overlap rather than chain sequentially.
+
+**Why the load takes so long:** The bottleneck is two sequential I/O steps: (1) network volume → CPU RAM at ~200 MB/s (~6–8 min for 79 GiB), then (2) CPU RAM → VRAM over PCIe Gen4 x16 at ~15–20 GB/s real throughput (~3–4 min for ~60 GiB of GPU weights). The parallel preload addresses step 1 by saturating available volume throughput across all three shards simultaneously, then step 2 proceeds entirely from page cache.
 
 **Why not FlashBoot?** FlashBoot would snapshot the warm worker and restore it in ~10s on the next cold start — eliminating the 8–10 min wait. However, the Flash load balancer force-kills idle workers after ~5 minutes, before RunPod can write the snapshot. This makes FlashBoot unreliable for this setup and it is currently disabled.
 

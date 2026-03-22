@@ -91,10 +91,24 @@ Plans:
 Plans:
 - [x] 05-01: Binary caching on network volume — seed builds llama-server, inference workers restore from volume (cached model approach abandoned; RunPod has no selective quant filtering)
 
+### Phase 6: Warmup Performance
+**Goal**: Measure and minimize idle-to-ready time so the endpoint is usable without a standing worker
+**Depends on**: Phase 5
+**Requirements**: PERF-01, PERF-02, PERF-03
+**Success Criteria** (what must be TRUE):
+  1. Cold start time (idle → model ready) is measured and documented with warm binary on volume
+  2. Network volume read throughput is benchmarked (`dd` from volume) to confirm it's not the bottleneck
+  3. `--mlock` evaluated — pins model pages in RAM after first load so subsequent cold starts on the same host skip re-paging
+**Research**: Not required — diagnostic work, results will inform whether further optimization is needed
+**Plans**: TBD
+
+Plans:
+- [ ] 06-01: Benchmark cold start, measure volume throughput, evaluate --mlock
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 5 → 6 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -103,3 +117,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. README & Documentation | 2/2 | Complete | 2026-03-22 |
 | 4. Streaming Support | 0/1 | Planned | - |
 | 5. Model Caching | 1/1 | Complete | 2026-03-22 |
+| 6. Warmup Performance | 0/1 | Planned | - |

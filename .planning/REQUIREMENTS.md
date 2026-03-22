@@ -32,6 +32,19 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **DOCS-05**: Context window tuning documents `-c` flag options and VRAM/RAM constraints (32768 default; scaling ladder to 131072; why 200k OOMs — KV cache ~320KB/token lives in VRAM, non-expert weights use ~25-30 GB of the 80 GB)
 - [ ] **DOCS-06**: MIT LICENSE file is included in the repository
 
+### Model Caching
+
+- [ ] **CACHE-01**: RunPod cached model is used on cold start — model loads in seconds, not 8–10 min
+- [ ] **CACHE-02**: Worker resolves cached model path dynamically at runtime via snapshot hash directory
+- [ ] **CACHE-03**: Only the `UD-Q4_K_XL` quantization is cached (not the full repo); selective quant download confirmed
+- [ ] **CACHE-04**: Network volume is no longer required for model storage; seed flow removed or repurposed for binary cache only
+
+### Streaming
+
+- [ ] **STRM-01**: Flash LB SSE pass-through is confirmed working or a workaround is implemented
+- [ ] **STRM-02**: `/v1/chat/completions` with `stream: true` returns `text/event-stream` SSE chunks to the client
+- [ ] **STRM-03**: Open WebUI, Claude Code, and OpenCode receive streamed tokens correctly
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.

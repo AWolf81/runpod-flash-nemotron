@@ -5,8 +5,10 @@
 # Press Ctrl+C when done — it will automatically scale the endpoint to 0 workers.
 #
 # Usage:
-#   bash warmup.sh                        # loads RUNPOD_API_KEY from .env
-#   RUNPOD_API_KEY=rp_... bash warmup.sh  # or pass it inline
+#   bash warmup.sh                              # uses default endpoint ID, loads RUNPOD_API_KEY from .env
+#   bash warmup.sh <endpoint-id>               # specify a different endpoint ID
+#   RUNPOD_API_KEY=rp_... bash warmup.sh       # pass API key inline
+#   RUNPOD_API_KEY=rp_... bash warmup.sh <id>  # both
 
 set -euo pipefail
 
@@ -16,8 +18,9 @@ if [[ -z "${RUNPOD_API_KEY:-}" ]] && [[ -f "$(dirname "$0")/.env" ]]; then
     set -a; source "$(dirname "$0")/.env"; set +a
 fi
 
-ENDPOINT="https://hf1ui3wrdsa31u.api.runpod.ai"
-ENDPOINT_ID="hf1ui3wrdsa31u"
+DEFAULT_ENDPOINT_ID="hf1ui3wrdsa31u"
+ENDPOINT_ID="${1:-${DEFAULT_ENDPOINT_ID}}"
+ENDPOINT="https://${ENDPOINT_ID}.api.runpod.ai"
 RUNPOD_API="https://api.runpod.io/graphql"
 
 if [[ -z "${RUNPOD_API_KEY:-}" ]]; then

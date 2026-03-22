@@ -41,7 +41,7 @@ Give any developer a self-hosted AI coding assistant at Claude Code / Codex qual
 - **All three target tools** (Claude Code, OpenCode, Mistral Vibe) consume OpenAI-compatible APIs. Same endpoint, different config files.
 - **EU-RO-1 datacenter**: RunPod Flash serverless is currently restricted to EU-RO-1 — low latency from Europe, noted in docs.
 - **Model source**: `unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF` on HuggingFace. Requires `HF_TOKEN`.
-- **Scale-to-zero option**: `workers=(0,1)` saves cost when idle but adds ~2-5 min cold start (model download). Documented as user choice.
+- **Scale-to-zero option**: `workers=(0,1)` saves cost when idle but adds ~2-5 min cold start (model load from network volume). Documented as user choice.
 
 ## Constraints
 
