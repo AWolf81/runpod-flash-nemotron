@@ -345,6 +345,8 @@ Cold start cost (model load from network volume into GPU VRAM):
 
 Default: `--ctx-size 32768`, all layers on GPU.
 
+**Minimum RAM:** 128 GB. The 84 GB GGUF is `mmap`'d, so the kernel keeps a full copy in system RAM as page cache alongside the VRAM copy (~84 GB page cache + OS overhead). 64 GB is not enough.
+
 For longer context with 250 GB RAM available:
 
 ```bash
@@ -367,7 +369,7 @@ KV cache for the 8 attention layers at 128k context is ~781 MiB in RAM. The SSM 
 
 The RTX Pro 6000 Blackwell (96 GB GDDR7) is the same GPU used on RunPod and fits in a standard full-tower desktop. It requires a 1600W ATX 3.0 PSU (600W TDP) and a workstation platform to support enough RAM.
 
-**Why you need a workstation platform:** Running an 84 GB GGUF with mmap keeps a copy of the model in system RAM as a page cache alongside the VRAM copy. Consumer platforms (AM5, LGA1851) max out at 192 GB — not enough. Threadripper PRO on WRX90 supports up to 2 TB DDR5 ECC.
+**Why you need a workstation platform:** Running an 84 GB GGUF with mmap keeps a full copy of the model in system RAM as a page cache alongside the VRAM copy — you need at least 128 GB RAM. Consumer platforms (AM5, LGA1851) support up to 192 GB, which works. Threadripper PRO on WRX90 supports up to 2 TB DDR5 ECC if you need headroom for longer context or other workloads.
 
 **Estimated build cost (March 2026):**
 
