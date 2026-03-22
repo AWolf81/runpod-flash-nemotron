@@ -120,11 +120,12 @@ async def chat_completions(
     response_format=None,
     tools=None,
     tool_choice=None,
-) -> dict:
+):
     import asyncio
     import subprocess
     import httpx
     from fastapi import HTTPException
+    from starlette.responses import StreamingResponse
 
     llama_bin = "/app/llama-server"
     model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
@@ -175,7 +176,7 @@ async def chat_completions(
         "messages": messages,
         "temperature": temperature,
         "top_p": top_p,
-        "stream": False,  # SSE streaming not supported through Flash LB
+        "stream": stream,
     }
     if max_tokens is not None:
         payload["max_tokens"] = max_tokens
@@ -187,6 +188,32 @@ async def chat_completions(
         payload["tools"] = tools
     if tool_choice is not None:
         payload["tool_choice"] = tool_choice
+
+    # stream=True: proxied via StreamingResponse (FastAPI LB supports SSE pass-through)
+    if stream:
+        async def sse_generator():
+            async with httpx.AsyncClient(timeout=1800) as client:
+                async with client.stream(
+                    "POST",
+                    f"{server_url}/v1/chat/completions",
+                    json=payload,
+                ) as r:
+                    if not r.is_success:
+                        error_data = await r.aread()
+                        yield f"data: {error_data.decode()}\n\n"
+                        return
+                    async for chunk in r.aiter_bytes():
+                        if chunk:
+                            yield chunk
+
+        return StreamingResponse(
+            sse_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     async with httpx.AsyncClient(timeout=1800) as client:
         r = await client.post(f"{server_url}/v1/chat/completions", json=payload)

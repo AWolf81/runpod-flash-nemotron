@@ -10,7 +10,7 @@ What's missing before this could serve production traffic:
 
 | Gap | Impact |
 |-----|--------|
-| No streaming (SSE) | Clients block until the full response is generated; poor UX for long outputs |
+| ~~No streaming (SSE)~~ | SSE streaming now supported via `StreamingResponse` — Claude Code and OpenCode stream by default |
 | 8–10 min cold starts | Unacceptable SLA for any user-facing product |
 | 1 parallel request slot (`--parallel 1`) | Concurrent requests queue behind each other |
 | EU-RO-1 datacenter only | No region failover; high latency from outside Europe |
@@ -402,7 +402,7 @@ For occasional coding assistant use, RunPod is cheaper for 3–4 years. The hard
 ## Known Limitations
 
 - **Live deployment not yet fully verified** — this repo is under active debugging. Core seeding and deployment flows work, but behavior on first cold start after a fresh volume may differ.
-- **Streaming not supported** — SSE streaming is disabled through the Flash LB; see `stream: False` in `chat_completions`. Non-streaming responses only.
+- **Streaming supported** — SSE streaming works through the Flash LB via `StreamingResponse`. Set `stream: true` in your client; Claude Code and OpenCode do this by default. See [docs/streaming.md](docs/streaming.md).
 - **EU-RO-1 only** — RunPod Flash serverless is currently restricted to the EU-RO-1 datacenter. Expect higher latency from outside Europe.
 
 ## Integration Guides
