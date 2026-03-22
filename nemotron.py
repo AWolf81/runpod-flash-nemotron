@@ -108,6 +108,9 @@ gpu_api = Endpoint(
 )
 
 
+_slot_primed = False
+
+
 @gpu_api.post("/v1/chat/completions")
 async def chat_completions(
     messages: list,
@@ -342,7 +345,8 @@ async def gpu_health() -> dict:
 
     if llama_ready:
         # Prime slot 0 to absorb NemotronH hybrid-attention first-request KV cache init (llama.cpp PR #13194)
-        if not getattr(gpu_api.state, "slot_primed", False):
+        global _slot_primed
+        if not _slot_primed:
             try:
                 async with httpx.AsyncClient(timeout=30.0) as prime_client:
                     await prime_client.post(
@@ -358,7 +362,7 @@ async def gpu_health() -> dict:
                 import logging
                 logging.getLogger(__name__).warning("Slot priming request failed (non-fatal): %s", e)
             finally:
-                gpu_api.state.slot_primed = True
+                _slot_primed = True
         return {"status": "ready"}
     if llama_loading:
         return {"status": "warming_up", "detail": "loading tensors into VRAM"}
