@@ -317,7 +317,7 @@ Cold start cost (model load from network volume into GPU VRAM):
 
 - **First cold start ever**: ~20–30 min — builds llama-server from source (~5–10 min) + loads 79 GiB model. Binary is then cached to `/runpod-volume/cache/llama-server`.
 - **Subsequent cold starts (before preload optimization)**: ~16m30s — restores binary from volume cache (seconds) + reads 79 GiB from network volume into page cache + transfers ~60 GiB of GPU weights to VRAM over PCIe.
-- **Subsequent cold starts (with preload optimization)**: TBD — `install_llama_server.sh` now pre-reads all GGUF shards in parallel into Linux page cache before starting llama-server, so CUDA DMA hits RAM at ~50 GB/s instead of the network volume at ~200 MB/s. The volume read and CUDA transfer now overlap rather than chain sequentially.
+- **Subsequent cold starts (with preload optimization)**: ~8m45s — `install_llama_server.sh` pre-reads all GGUF shards using 4 concurrent `dd` streams per shard (12 parallel readers total) into Linux page cache before starting llama-server. CUDA DMA then hits RAM at ~50 GB/s instead of the network volume at ~200 MB/s. Measured: DDR peaks at ~45 GB page cache, VRAM 79 GB fully loaded at 8m45s.
 
 **Why the load takes so long:** The bottleneck is two sequential I/O steps: (1) network volume → CPU RAM at ~200 MB/s (~6–8 min for 79 GiB), then (2) CPU RAM → VRAM over PCIe Gen4 x16 at ~15–20 GB/s real throughput (~3–4 min for ~60 GiB of GPU weights). The parallel preload addresses step 1 by saturating available volume throughput across all three shards simultaneously, then step 2 proceeds entirely from page cache.
 
