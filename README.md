@@ -2,6 +2,22 @@
 
 Run NVIDIA Nemotron-3-Super-120B-A12B GGUF on RunPod Flash with a shared network volume and expose it as an OpenAI-compatible API for Claude Code, OpenCode, and Mistral Vibe.
 
+## Status
+
+**Personal use / experimentation.** This works well as a private coding assistant for a single developer — inference quality and speed are production-grade (81 tok/s, 3.67s latency). The *deployment* is not.
+
+What's missing before this could serve production traffic:
+
+| Gap | Impact |
+|-----|--------|
+| No streaming (SSE) | Clients block until the full response is generated; poor UX for long outputs |
+| 8–10 min cold starts | Unacceptable SLA for any user-facing product |
+| 1 parallel request slot (`--parallel 1`) | Concurrent requests queue behind each other |
+| EU-RO-1 datacenter only | No region failover; high latency from outside Europe |
+| No rate limiting or cost caps | A single runaway loop can run up an unbounded GPU bill |
+
+For personal use all of this is fine — you control the key, you know the latency, you're the only user.
+
 ## What You Get
 
 - One-file RunPod Flash deployment in [nemotron.py](nemotron.py)
@@ -339,7 +355,7 @@ KV cache for the 8 attention layers at 128k context is ~781 MiB in RAM. The SSM 
 
 ## Cost Notes
 
-- **GPU**: RTX Pro 6000 Blackwell (97GB VRAM) — only GPU with enough VRAM that isn't cost-prohibitive. A100/H100 80GB OOM on this model; H200/B200 work but cost 3–4× more with no benefit.
+- **GPU**: RTX Pro 6000 Blackwell (96 GB VRAM) — only GPU with enough VRAM that isn't cost-prohibitive. A100/H100 80GB OOM on this model; H200/B200 work but cost 3–4× more with no benefit.
 - **Price**: ~$1.69/hr on RTX Pro 6000 Blackwell
 - **Billing**: only while a worker is running. The warmup.sh script starts/stops billing automatically.
 - **Estimated cost**: 8h/day × $1.69 × 22 working days ≈ **~$297/month**
