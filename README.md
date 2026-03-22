@@ -11,13 +11,13 @@ Run NVIDIA Nemotron-3-Super-120B-A12B GGUF on RunPod Flash with a shared network
 
 ## Performance
 
-Benchmarked over 20 consecutive requests (300 output tokens, ~26 prompt tokens) on RTX Pro 6000 Blackwell (97 GB VRAM):
+Benchmarked over 19 consecutive requests (300 output tokens, 26 prompt tokens) on RTX Pro 6000 Blackwell (97 GB VRAM):
 
-| Metric | Value |
-|--------|-------|
-| Generation speed | **81.2 tok/s** (stdev 0.2) |
-| Prompt processing | **360.6 tok/s** (stdev 0.8) |
-| Generation latency (300 tokens) | 3.7 s (p99: 3.7 s) |
+| Metric | Mean | stdev | p50 | p99 |
+|--------|------|-------|-----|-----|
+| Generation speed | **81.7 tok/s** | 0.8 | 81.4 | 82.8 |
+| Prompt speed | **359.7 tok/s** | 1.6 | 359.7 | 363.0 |
+| Generation latency (300 tokens) | **3.67 s** | 37 ms | 3.69 s | 3.72 s |
 
 Variance is negligible — the GPU is fully saturated and consistent. For reference, most 70B model deployments run 40–60 tok/s. Nemotron-Super-120B is a sparse MoE with only 12B active parameters, which explains the speed despite the 120B parameter count.
 
