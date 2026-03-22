@@ -9,29 +9,34 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Current Position
 
-Phase: All v0.1.0 phases complete (Phases 1–6)
-Plan: Not started
-Status: Ready to plan v0.2.0
-Last activity: 2026-03-22 — v0.1.0 milestone complete
+Phase: Not started (run /gsd:create-roadmap)
+Plan: —
+Status: Defining requirements for v0.2.0
+Last activity: 2026-03-22 — Milestone v0.2.0 Hardening started
 
-Progress: ██████████ 100% (v0.1.0)
+Progress: ░░░░░░░░░░ 0% (v0.2.0)
 
 ## Accumulated Context
 
-### Open Items for Next Milestone
+### v0.2.0 Priority Order
 
-- **VRAM load time (~3–6 min)**: mmap over network volume is slow. `--no-mmap` OOMs (CUDA pre-allocates full 79GB buffer). Needs investigation: more VRAM, NVMe, or different approach.
-- **Selective quant caching**: `get_cached_model_path()` dormant pending RunPod selective quant support.
-- **STRM-03**: Claude Code and Mistral Vibe streaming untested against live endpoint.
-- **ENH-01**: Streaming config examples in integration snippets.
-- **download_model.py**: Superseded by `python nemotron.py seed`; should be removed or documented as legacy.
+1. E2E verification — highest trust signal; removes "not fully verified" disclaimer
+2. Parallel requests — investigative; "not feasible" is a valid outcome worth documenting
+3. Streaming e2e + docs — Claude Code + Mistral Vibe live tests + integration snippets
+4. Cleanup — small but reduces new-user confusion
+
+### Constraints
+
+- Phase numbering continues from 7 (v0.1.0 used phases 1–6)
+- E2E verification requires live RunPod session (user executes; plan provides exact test sequence)
+- Parallel slots investigation: outcome could be "document as not viable at 96GB VRAM"
 
 ### Blockers/Concerns
 
-_(none — all v0.1.0 issues resolved or deferred with rationale)_
+_(none)_
 
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: v0.1.0 milestone archived and tagged
-Resume file: None — start with `/gsd:discuss-milestone` for v0.2.0
+Stopped at: v0.2.0 milestone initialized
+Resume file: None — run `/gsd:create-roadmap` next

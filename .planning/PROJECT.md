@@ -26,10 +26,10 @@ Give any developer a self-hosted AI coding assistant at Claude Code / Codex qual
 
 ### Active
 
-- [ ] VRAM load time reduction — ~3–6 min mmap over network volume; `--no-mmap` OOMs (CUDA pre-allocates full 79GB buffer before streaming); needs more VRAM or a different serving approach
-- [ ] Selective quant caching — `get_cached_model_path()` dormant; `CACHED_REPO_ID=""` guards it pending RunPod selective quant support
-- [ ] Streaming config examples in integration snippets (ENH-01 from v2 backlog)
-- [ ] Claude Code and Mistral Vibe streaming verified against live endpoint (STRM-03 partial — OpenCode + Open WebUI verified live)
+- [ ] E2E deployment verification — clean cold start from a fresh volume; confirm deploy → seed → inference flow for a new user; remove "under active debugging / not fully verified" disclaimer from README
+- [ ] Parallel requests — investigate raising `--parallel` slots from 1 to 2+ without OOM; document trade-off vs context window size; update README status table
+- [ ] Streaming e2e + docs — test Claude Code + Mistral Vibe streaming against live endpoint; add streaming examples to integration snippets; update README status table
+- [ ] Codebase cleanup — remove `download_model.py` (superseded by `python nemotron.py seed`); tidy dormant `get_cached_model_path()` (remove or document as dormant); fix stale comments
 
 ### Out of Scope
 
@@ -74,5 +74,15 @@ Give any developer a self-hosted AI coding assistant at Claude Code / Codex qual
 | FastAPI StreamingResponse for SSE | Flash LB passes through unchanged; prior "not supported" comment was unverified | ✓ Good — live-tested with OpenCode + Open WebUI |
 | Slot priming on first /health ok | NemotronH hybrid-attention requires KV cache init; first real request was timing out | ✓ Good — first-request failure eliminated |
 
+## Current Milestone: v0.2.0 Hardening
+
+**Goal:** Turn v0.1.0 from "works for me" into a repo a stranger can clone and use.
+
+**Target features:**
+- E2E deployment verification (remove "not fully verified" disclaimer)
+- Parallel requests investigation (1 → 2+ slots without OOM)
+- Streaming e2e verification for Claude Code + Mistral Vibe + integration docs
+- Codebase cleanup (download_model.py, dormant get_cached_model_path, stale docs)
+
 ---
-*Last updated: 2026-03-22 after v0.1.0 milestone*
+*Last updated: 2026-03-22 after starting v0.2.0 milestone*
