@@ -5,13 +5,13 @@
 See: .planning/PROJECT.md (updated 2026-03-20)
 
 **Core value:** Give any developer a self-hosted AI coding assistant at Claude Code / Codex quality and speed, paying only for GPU seconds used on RunPod serverless — not a subscription.
-**Current focus:** All planned phases complete. Open issue: VRAM load time (mmap over network volume ~3-6 min).
+**Current focus:** All planned phases complete. Cold start optimized to ~8m45s; benchmarks documented; first-request failure fixed with slot priming.
 
 ## Current Position
 
-Phase: 5 of 5 (Model Caching) — Complete
+Phase: 6 of 6 (Warmup Performance) — Complete
 Status: All phases done
-Last activity: 2026-03-22 — Phase 5 complete; binary caching on volume implemented; cached model approach abandoned (RunPod has no selective quant filtering)
+Last activity: 2026-03-22 — Phase 6 plan 1 complete; benchmarks documented; slot priming fix added; --mlock evaluated and ruled out
 
 Progress: ██████████ 100%
 
@@ -30,6 +30,7 @@ Progress: ██████████ 100%
 | 02-integration-guides | 1/1 | ~1 min | ~1 min |
 | 03-readme-documentation | 2/2 | ~2 min | ~1 min |
 | 05-model-caching | 1/3 (2 skipped) | ~60 min | — |
+| 06-warmup-performance | 1/1 | ~5 min | ~5 min |
 
 ## Accumulated Context
 
@@ -50,15 +51,14 @@ Progress: ██████████ 100%
 
 ### Pending Todos
 
-- Benchmark idle-to-ready time with warm binary (binary on volume, model on volume) — aborted at 6 min
-- Investigate why mmap load takes ~3-6 min over network volume and whether it can be reduced
+_(none — all open issues resolved in Phase 6)_
 
 ### Blockers/Concerns
 
-- VRAM load time with mmap over network volume is slow (~3-6 min observed). Root cause unclear — may be network volume throughput, mmap page fault pattern, or CUDA transfer speed.
+_(none)_
 
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: Phase 5 complete; all SUMMARYs written; open issue is VRAM load benchmark
+Stopped at: Phase 6 plan 1 complete; docs/benchmarks.md written; slot priming fix committed; STATE.md updated
 Resume file: None
