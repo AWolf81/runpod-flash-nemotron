@@ -422,3 +422,7 @@ open-webui serve
 ```
 
 Replace `<RUNPOD_ID>` with your endpoint ID from the RunPod console. The extended timeouts are required because model list and completion requests can take longer than the default limits on a 120B model.
+
+---
+
+*This is an independent community project. Not affiliated with, endorsed by, or sponsored by RunPod or NVIDIA. RunPod and NVIDIA Nemotron are trademarks of their respective owners.*
