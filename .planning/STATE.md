@@ -2,65 +2,36 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-20)
+See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Give any developer a self-hosted AI coding assistant at Claude Code / Codex quality and speed, paying only for GPU seconds used on RunPod serverless — not a subscription.
-**Current focus:** All planned phases complete. Cold start optimized to ~8m45s; benchmarks documented; first-request failure fixed with slot priming.
+**Current focus:** v0.1.0 milestone complete. Planning next milestone.
 
 ## Current Position
 
-Phase: 4 of 6 (Streaming Support) — Complete
-Status: All phases done
-Last activity: 2026-03-22 — Phase 4 plan 1 complete; SSE streaming via StreamingResponse confirmed working; OpenCode and Open WebUI tested live
+Phase: All v0.1.0 phases complete (Phases 1–6)
+Plan: Not started
+Status: Ready to plan v0.2.0
+Last activity: 2026-03-22 — v0.1.0 milestone complete
 
-Progress: ██████████ 100%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 4 (+ 2 skipped)
-- Average duration: ~2 min
-- Total execution time: ~0.05 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01-core-deployment | 2/2 | ~3 min | ~2 min |
-| 02-integration-guides | 1/1 | ~1 min | ~1 min |
-| 03-readme-documentation | 2/2 | ~2 min | ~1 min |
-| 05-model-caching | 1/3 (2 skipped) | ~60 min | — |
-| 06-warmup-performance | 1/1 | ~5 min | ~5 min |
-| 04-streaming-support | 1/1 | ~10 min | ~10 min |
+Progress: ██████████ 100% (v0.1.0)
 
 ## Accumulated Context
 
-### Decisions
+### Open Items for Next Milestone
 
-| Phase | Decision | Rationale |
-|-------|----------|-----------|
-| 01-02 | unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF as download source | GGUF-only repo avoids pulling full safetensor weights |
-| 01-02 | allow_patterns=["*UD-Q4_K_XL*"] for selective download | Downloads only target quant (~60 GB, not full repo) |
-| 01-02 | One-command remote seeding via `python nemotron.py seed` | Keeps the volume bootstrap path in the main deployment script |
-| 01-01 | workers=(0,2) scale-to-zero default | Cheapest for single-developer |
-| 05 | Binary caching on volume instead of RunPod cached models | RunPod cached models downloads all files — no selective quant filtering; 2.01 TB would be downloaded from unsloth repo |
-| 05 | Seed runner uses same GPU as inference (RTX Pro 6000 Blackwell) | Binary must be compiled on same CUDA driver stack as inference workers |
-| 05 | Multi-arch CUDA build: sm_90;100;120 | Supports H200/B200/RTX Pro 6000 Blackwell from one binary |
-| 05 | --no-kv-offload removed | Was causing OOM — forces KV cache into VRAM alongside 79GB model weights, exceeding 97GB |
-| 05 | --no-mmap reverted | OOM: CUDA pre-allocates full 79GB buffer before streaming tensors; mmap stays |
-| 05 | get_cached_model_path() dormant (CACHED_REPO_ID="") | Feature ready for when RunPod ships selective quant support |
-| 04 | FastAPI StreamingResponse passes through Flash LB unchanged | Prior "SSE not supported" comment was unverified assumption; no workaround needed |
-
-### Pending Todos
-
-_(none — all open issues resolved in Phase 6)_
+- **VRAM load time (~3–6 min)**: mmap over network volume is slow. `--no-mmap` OOMs (CUDA pre-allocates full 79GB buffer). Needs investigation: more VRAM, NVMe, or different approach.
+- **Selective quant caching**: `get_cached_model_path()` dormant pending RunPod selective quant support.
+- **STRM-03**: Claude Code and Mistral Vibe streaming untested against live endpoint.
+- **ENH-01**: Streaming config examples in integration snippets.
+- **download_model.py**: Superseded by `python nemotron.py seed`; should be removed or documented as legacy.
 
 ### Blockers/Concerns
 
-_(none)_
+_(none — all v0.1.0 issues resolved or deferred with rationale)_
 
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: Phase 4 plan 1 complete; SSE streaming implemented and live-tested; STATE.md updated
-Resume file: None
+Stopped at: v0.1.0 milestone archived and tagged
+Resume file: None — start with `/gsd:discuss-milestone` for v0.2.0
