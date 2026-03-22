@@ -347,13 +347,13 @@ Default: `--ctx-size 32768`, all layers on GPU.
 
 **Minimum RAM:** 128 GB. The 84 GB GGUF is `mmap`'d, so the kernel keeps a full copy in system RAM as page cache alongside the VRAM copy (~84 GB page cache + OS overhead). 64 GB is not enough.
 
-For longer context with 250 GB RAM available:
+**Maximum context: 131072 (128k tokens)** — the model's trained limit. On 96 GB VRAM + 128 GB RAM you hit the model ceiling, not a hardware limit. The KV cache is small because only 8 of the layers are full attention; the rest are Mamba2 SSM with fixed-size recurrent state (~659 MiB regardless of context length). At 128k ctx the KV cache is ~781 MiB in VRAM, leaving ~31 GB headroom.
+
+For 128k context:
 
 ```bash
---n-gpu-layers 85 --no-kv-offload --ctx-size 131072 --parallel 1
+--n-gpu-layers 99 --no-kv-offload --ctx-size 131072 --parallel 1
 ```
-
-KV cache for the 8 attention layers at 128k context is ~781 MiB in RAM. The SSM recurrent state (659 MiB) is fixed regardless of context length.
 
 ## Cost Notes
 
