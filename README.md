@@ -402,7 +402,6 @@ For occasional coding assistant use, RunPod is cheaper for 3–4 years. The hard
 ## Known Limitations
 
 - **Live deployment not yet fully verified** — this repo is under active debugging. Core seeding and deployment flows work, but behavior on first cold start after a fresh volume may differ.
-- **LICENSE not yet added** — MIT license is planned but the `LICENSE` file has not been added to this repository yet.
 - **Streaming not supported** — SSE streaming is disabled through the Flash LB; see `stream: False` in `chat_completions`. Non-streaming responses only.
 - **EU-RO-1 only** — RunPod Flash serverless is currently restricted to the EU-RO-1 datacenter. Expect higher latency from outside Europe.
 
