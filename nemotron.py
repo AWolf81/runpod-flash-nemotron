@@ -194,6 +194,12 @@ async def chat_completions(
 
     # stream=True: proxied via StreamingResponse (FastAPI LB supports SSE pass-through)
     if stream:
+        # Inject stream_options so llama-server emits a final usage chunk
+        # (choices:[], usage:{prompt_tokens, completion_tokens, total_tokens}).
+        # The gateway layer uses this for token metering. Clients that don't
+        # understand stream_options safely ignore it.
+        payload["stream_options"] = {"include_usage": True}
+
         async def sse_generator():
             async with httpx.AsyncClient(timeout=1800) as client:
                 async with client.stream(
