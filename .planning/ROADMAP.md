@@ -25,6 +25,20 @@ Full details: [milestones/v0.1.0-ROADMAP.md](milestones/v0.1.0-ROADMAP.md)
 
 **Milestone Goal:** Turn v0.1.0 from "works for me" into a repo a stranger can clone and use.
 
+#### Phase 6.1: warmup.sh UX Improvements
+**Goal**: warmup.sh shows elapsed time and GPU allocation guidance so users know how long to wait
+**Depends on**: Phase 6 (v0.1.0 complete)
+**Requirements**: N/A (quality of life)
+**Success Criteria** (what must be TRUE):
+  1. Elapsed time shown in every status line (e.g. `14:23:05 [2m15s] — starting`)
+  2. Start message explains expected wait times (2–5 min GPU allocation + 5–10 min model load)
+  3. No RunPod GPU availability API exists — script documents this limitation in comments
+**Research**: No (confirmed: RunPod has no public API for GPU availability or queue depth)
+**Plans**: TBD
+
+Plans:
+- [x] 6.1-01: Add elapsed timer + start-time message to warmup.sh (done inline 2026-03-28)
+
 #### Phase 7: E2E Verification
 **Goal**: Verified cold-start-to-inference flow; "not fully verified" disclaimer removed
 **Depends on**: Phase 6 (v0.1.0 complete)
@@ -98,6 +112,7 @@ Plans:
 | 4. Streaming Support | v0.1.0 | 1/1 | Complete | 2026-03-22 |
 | 5. Model Caching | v0.1.0 | 1/1 (2 skipped) | Complete | 2026-03-22 |
 | 6. Warmup Performance | v0.1.0 | 1/1 | Complete | 2026-03-22 |
+| 6.1. warmup.sh UX | v0.2.0 | 1/1 | Complete | 2026-03-28 |
 | 7. E2E Verification | v0.2.0 | 0/TBD | Not started | - |
 | 8. Parallel Requests | v0.2.0 | 0/TBD | Not started | - |
 | 9. Streaming E2E + Docs | v0.2.0 | 0/TBD | Not started | - |

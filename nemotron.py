@@ -485,6 +485,11 @@ def main(argv: list[str] | None = None) -> int:
         print(__doc__.strip())
         return 0
 
+    if args and args[0] == "gpu-types":
+        for gpu in gpu_api._gpu:
+            print(gpu.value)
+        return 0
+
     if args and args[0] == "seed":
         flags = set(args[1:])
         unknown = flags - {"--clean-binary", "--clean-model"}
