@@ -62,19 +62,26 @@ echo "==> Checking GPU stock availability..."
 if [[ "${#GPU_TYPES[@]}" -eq 0 ]]; then
     echo "    (could not read GPU types from nemotron.py)"
 else
+    # Fetch stock for all GPU types, then sort High first
+    _stock_lines=()
     for _gpu in "${GPU_TYPES[@]}"; do
         _stock=$(curl -s -X POST "${RUNPOD_GRAPHQL_API}?api_key=${RUNPOD_API_KEY}" \
             -H "Content-Type: application/json" \
             -d "{\"query\":\"{ gpuTypes(input: {id: \\\"${_gpu}\\\"}) { lowestPrice(input: {gpuCount: 1, minMemoryInGb: 8, minVcpuCount: 2, secureCloud: false}) { stockStatus } } }\"}" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['gpuTypes'][0]['lowestPrice']['stockStatus'])" 2>/dev/null || echo "unknown")
-        if [[ "${_stock}" == "Low" ]]; then
-            echo "    ${_gpu} — stock: Low (expect longer wait, may take 10–20+ min)"
-        elif [[ "${_stock}" == "High" ]]; then
-            echo "    ${_gpu} — stock: High (worker should start within 2–5 min)"
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['gpuTypes'][0]['lowestPrice']['stockStatus'] or 'Unavailable')" 2>/dev/null || echo "unknown")
+        # Prefix with sort key: 0=High, 1=Low, 2=other
+        if [[ "${_stock}" == "High" ]]; then
+            _stock_lines+=("0    ${_gpu} — stock: High (worker should start within 2–5 min)")
+        elif [[ "${_stock}" == "Low" ]]; then
+            _stock_lines+=("1    ${_gpu} — stock: Low (expect longer wait, may take 10–20+ min)")
+        elif [[ "${_stock}" == "Unavailable" ]]; then
+            _stock_lines+=("3    ${_gpu} — stock: Unavailable (no GPUs in pool)")
         else
-            echo "    ${_gpu} — stock: ${_stock}"
+            _stock_lines+=("2    ${_gpu} — stock: ${_stock}")
         fi
     done
+    # Print sorted (High first), stripping the sort key prefix
+    printf '%s\n' "${_stock_lines[@]}" | sort | sed 's/^[0-9]//'
 fi
 
 echo "==> Scaling endpoint to 1 worker (max 2 for overflow)..."

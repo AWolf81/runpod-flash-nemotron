@@ -90,7 +90,11 @@ gpu_api = Endpoint(
     # RTX Pro 6000 Blackwell (97GB) at $1.69/hr — best value for this model.
     # H200/B200 have more VRAM but cost 3-4x more with no benefit here.
     gpu=[
+        # All three Blackwell RTX PRO 6000 variants have 96GB VRAM at the same
+        # price ($1.69/hr). List all so RunPod picks whichever has availability.
         GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_SERVER_EDITION,
+        GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_WORKSTATION_EDITION,
+        GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_MAX_Q_WORKSTATION_EDITION,
     ],
     env={"PORT": "80"},
     dependencies=["httpx"],
@@ -429,11 +433,14 @@ def make_seed_runner(hf_token: str):
 
     return Endpoint(
         name=temp_seed_name,
-        # Must be the same GPU type as the inference workers — same GPU = same CUDA driver
-        # stack, so the compiled llama-server binary runs without compatibility issues.
-        # install_llama_server.sh builds for sm_90;100;120 (H200/B200/RTX Pro 6000 Blackwell).
-        # If you change the inference GPU, change this to match and re-run seed --clean-binary.
-        gpu=[GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_SERVER_EDITION],
+        # Must be same GPU family as inference workers — same CUDA arch = binary compatibility.
+        # All three Blackwell variants share sm_120 arch, so the binary is compatible across them.
+        # If you change the inference GPU family, update this list and re-run seed --clean-binary.
+        gpu=[
+            GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_SERVER_EDITION,
+            GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_WORKSTATION_EDITION,
+            GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_MAX_Q_WORKSTATION_EDITION,
+        ],
         dependencies=["huggingface_hub>=0.32.0"],
         volume=make_volume(),
         env={"HF_TOKEN": hf_token},
