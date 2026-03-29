@@ -22,6 +22,7 @@ import threading
 import time
 
 from runpod_flash import Endpoint, GpuType, NetworkVolume
+from runpod_flash.core.resources.serverless import ServerlessResource
 from runpod_flash.core.resources.template import PodTemplate
 
 
@@ -33,12 +34,126 @@ def _auto_start():
 if os.path.exists("/app/patches/install_llama_server.sh"):
     threading.Thread(target=_auto_start, daemon=True).start()
 
-VOLUME_NAME = "nemotron-model-cache"
-MODEL_DIR = "/runpod-volume/models/UD-Q4_K_XL"
-MODEL_FILENAME = "NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+
+def _patch_flash_template_update_payload() -> None:
+    """Ensure deploy updates keep template ports/startScript fields."""
+    if getattr(ServerlessResource, "_nemotron_template_patch_applied", False):
+        return
+
+    original = ServerlessResource._build_template_update_payload
+
+    def patched(template: PodTemplate, template_id: str) -> dict:
+        payload = original(template, template_id)
+        try:
+            template_data = template.model_dump(exclude_none=True, mode="json")
+            if "ports" in template_data:
+                payload["ports"] = template_data["ports"]
+            if "startScript" in template_data:
+                payload["startScript"] = template_data["startScript"]
+        except Exception:
+            pass
+        return payload
+
+    ServerlessResource._build_template_update_payload = staticmethod(patched)
+    ServerlessResource._nemotron_template_patch_applied = True
+
+
+_patch_flash_template_update_payload()
+
+
+def _patch_flash_manifest_template_ports() -> None:
+    """Ensure flash build manifest keeps template ports from Endpoint config."""
+    try:
+        from runpod_flash.cli.commands.build_utils.manifest import ManifestBuilder
+    except Exception:
+        return
+
+    if getattr(ManifestBuilder, "_nemotron_manifest_ports_patch_applied", False):
+        return
+
+    original = ManifestBuilder._extract_config_properties
+
+    def patched(config: dict, resource_config) -> None:
+        original(config, resource_config)
+        try:
+            template_obj = getattr(resource_config, "template", None)
+            if not template_obj:
+                return
+            ports = getattr(template_obj, "ports", None)
+            if ports:
+                config.setdefault("template", {})
+                config["template"]["ports"] = ports
+        except Exception:
+            pass
+
+    ManifestBuilder._extract_config_properties = staticmethod(patched)
+    ManifestBuilder._nemotron_manifest_ports_patch_applied = True
+
+
+_patch_flash_manifest_template_ports()
+
+
+def _patch_flash_resource_provisioning_template() -> None:
+    """Ensure deploy provisioning uses manifest template fields (including ports)."""
+    try:
+        import runpod_flash.runtime.resource_provisioner as provisioner
+    except Exception:
+        return
+
+    if getattr(provisioner, "_nemotron_template_provision_patch_applied", False):
+        return
+
+    original = provisioner.create_resource_from_manifest
+
+    def patched(resource_name, resource_data, *args, **kwargs):
+        resource = original(resource_name, resource_data, *args, **kwargs)
+        try:
+            template_data = (resource_data or {}).get("template")
+            if isinstance(template_data, dict) and template_data:
+                template_payload = dict(template_data)
+                # saveTemplate requires imageName; inherit from resource when missing.
+                if not template_payload.get("imageName"):
+                    template_payload["imageName"] = getattr(resource, "imageName", "")
+                if "name" not in template_payload:
+                    template_payload["name"] = ""
+                if not template_payload.get("env"):
+                    env_dict = dict(getattr(resource, "env", {}) or {})
+                    # Ensure port env is always present on LB templates.
+                    env_dict.setdefault("PORT", "80")
+                    env_dict.setdefault("PORT_HEALTH", env_dict["PORT"])
+                    template_payload["env"] = [
+                        {"key": str(k), "value": str(v)} for k, v in env_dict.items()
+                    ]
+                # Preserve explicit template config from manifest; needed for ports.
+                resource.template = PodTemplate(**template_payload)
+        except Exception:
+            pass
+        return resource
+
+    provisioner.create_resource_from_manifest = patched
+    # deployment.py imports the function symbol directly; patch that alias too.
+    try:
+        import runpod_flash.cli.utils.deployment as deploy_utils
+
+        deploy_utils.create_resource_from_manifest = patched
+    except Exception:
+        pass
+
+    provisioner._nemotron_template_provision_patch_applied = True
+
+
+_patch_flash_resource_provisioning_template()
+
+# VOLUME_NAME = "nemotron-model-cache"         # Q4_K_XL volume
+VOLUME_NAME = "nemotron-iq4xs-cache"            # IQ4_XS volume (separate)
+# MODEL_DIR = "/runpod-volume/models/UD-Q4_K_XL"
+# MODEL_FILENAME = "NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+MODEL_DIR = "/runpod-volume/models/UD-IQ4_XS"
+MODEL_FILENAME = "NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
 MODEL_PATH = f"{MODEL_DIR}/{MODEL_FILENAME}"
 
-GPU_INFERENCE_ENDPOINT_NAME = "nemotron-super-120b"
+# GPU_INFERENCE_ENDPOINT_NAME = "nemotron-super-120b"   # Q4_K_XL endpoint
+GPU_INFERENCE_ENDPOINT_NAME = "nemotron-iq4xs"          # IQ4_XS endpoint (separate)
 
 # ── Cached Model Configuration ────────────────────────────────────────────────
 # RunPod cached models mounts the HF repo at:
@@ -96,11 +211,12 @@ gpu_api = Endpoint(
         GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_WORKSTATION_EDITION,
         GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_MAX_Q_WORKSTATION_EDITION,
     ],
-    env={"PORT": "80"},
+    env={"PORT": "80", "PORT_HEALTH": "80"},
     dependencies=["httpx"],
     volume=make_volume(),
     template=PodTemplate(
         containerDiskInGb=64,
+        ports="80/http",
         # startScript appears not to run reliably in Flash LB workers.
         # Auto-warmup is handled by the _auto_start thread in nemotron.py instead.
         # startScript="bash /app/patches/install_llama_server.sh",
@@ -112,7 +228,67 @@ gpu_api = Endpoint(
 )
 
 
-_slot_primed = False
+_slot_primed = False      # True once priming has been triggered
+_slot_prime_done = False  # True once priming request completed (VRAM fully warm)
+_llama_start_lock = threading.Lock()
+
+
+def _start_llama_server_once() -> str:
+    """Start llama-server only if it is not already running/loading."""
+    import httpx
+
+    llama_bin = "/app/llama-server"
+    model_path = "/runpod-volume/models/UD-IQ4_XS/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
+    server_url = "http://127.0.0.1:8081/health"
+
+    with _llama_start_lock:
+        try:
+            with httpx.Client(timeout=1.5) as client:
+                r = client.get(server_url)
+            if r.status_code in (200, 503):
+                return "already_running"
+        except Exception:
+            pass
+
+        # Guard against duplicate process launch if health probe races.
+        if subprocess.run(["pgrep", "-x", "llama-server"], capture_output=True).returncode == 0:
+            return "already_running"
+
+        subprocess.Popen([
+            llama_bin,
+            "--model", model_path,
+            "--host", "127.0.0.1",
+            "--port", "8081",
+            "--n-gpu-layers", "99",
+            "--parallel", "1",
+            "--ctx-size", "32768",
+            "--flash-attn", "on",
+        ])
+        return "started"
+
+
+async def _prime_slot():
+    """Fire a single 1-token request to absorb NemotronH first-request KV cache init.
+    Runs in the background so it never blocks health checks.
+    Sets _slot_prime_done when complete so /health can report fully warm."""
+    global _slot_prime_done
+    import httpx
+    import logging
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            await client.post(
+                "http://127.0.0.1:8081/v1/chat/completions",
+                json={
+                    "model": "nemotron",
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "max_tokens": 1,
+                    "temperature": 0,
+                },
+            )
+        _slot_prime_done = True
+    except Exception as e:
+        logging.getLogger(__name__).warning("Slot priming failed (non-fatal): %s", e)
+        _slot_prime_done = True  # mark done anyway so health doesn't stay stuck
 
 
 @gpu_api.post("/v1/chat/completions")
@@ -135,7 +311,8 @@ async def chat_completions(
     from starlette.responses import StreamingResponse
 
     llama_bin = "/app/llama-server"
-    model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+    # model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+    model_path = "/runpod-volume/models/UD-IQ4_XS/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
     server_url = "http://127.0.0.1:8081"
 
     # Check if server is already running
@@ -147,7 +324,6 @@ async def chat_completions(
             server_ready = False
 
     if not server_ready:
-        import os
         if not os.path.exists(llama_bin):
             raise RuntimeError(
                 f"llama-server binary not found at {llama_bin}. "
@@ -156,16 +332,7 @@ async def chat_completions(
                 "or via SSH: bash /app/patches/install_llama_server.sh"
             )
 
-        subprocess.Popen([
-            llama_bin,
-            "--model", model_path,
-            "--host", "127.0.0.1",
-            "--port", "8081",
-            "--n-gpu-layers", "99",
-            "--parallel", "1",
-            "--ctx-size", "32768",
-            "--flash-attn", "on",
-        ])
+        _start_llama_server_once()
         async with httpx.AsyncClient() as client:
             for _ in range(120):
                 try:
@@ -258,7 +425,8 @@ async def admin_debug() -> dict:
         "patch_exists": os.path.exists("/app/patches/install_llama_server.sh"),
         "binary_exists": os.path.exists("/app/llama-server"),
         "volume_cache_exists": os.path.exists("/runpod-volume/cache/llama-server"),
-        "local_model_exists": os.path.exists("/local-model/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"),
+        # "local_model_exists": os.path.exists("/local-model/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"),
+        "local_model_exists": os.path.exists("/local-model/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"),
         "runpod_pod_id": os.environ.get("RUNPOD_POD_ID"),
         "env_keys": [k for k in os.environ if "RUNPOD" in k],
     }
@@ -301,7 +469,8 @@ async def warmup() -> dict:
     import subprocess
 
     llama_bin = "/app/llama-server"
-    model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+    # model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+    model_path = "/runpod-volume/models/UD-IQ4_XS/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
 
     if not os.path.exists(llama_bin):
         return {
@@ -309,17 +478,12 @@ async def warmup() -> dict:
             "message": f"Binary not found at {llama_bin}. Run POST /admin/install first.",
         }
 
-    subprocess.Popen([
-        llama_bin,
-        "--model", model_path,
-        "--host", "127.0.0.1",
-        "--port", "8081",
-        "--n-gpu-layers", "99",
-        "--parallel", "1",
-        "--ctx-size", "32768",
-        "--flash-attn", "on",
-    ])
-    return {"status": "warming_up", "message": "Poll GET /health until llama_server_ready=true, then send requests."}
+    launch = _start_llama_server_once()
+    return {
+        "status": "warming_up",
+        "launch": launch,
+        "message": "Poll GET /health until llama_server_ready=true, then send requests.",
+    }
 
 
 @gpu_api.post("/keepalive")
@@ -333,7 +497,8 @@ async def gpu_health() -> dict:
     import os
     import httpx
 
-    model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+    # model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+    model_path = "/runpod-volume/models/UD-IQ4_XS/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
     llama_bin = "/app/llama-server"
     if not os.path.exists(model_path):
         return {"status": "missing_model", "model_path": model_path}
@@ -354,25 +519,17 @@ async def gpu_health() -> dict:
         llama_loading = False
 
     if llama_ready:
-        # Prime slot 0 to absorb NemotronH hybrid-attention first-request KV cache init (llama.cpp PR #13194)
-        global _slot_primed
+        # Prime slot 0 in the background to absorb NemotronH hybrid-attention
+        # first-request KV cache init (llama.cpp PR #13194).
+        # Must NOT block here — health check must return fast or the Flash LB
+        # times out and warmup.sh never sees "ready".
+        global _slot_primed, _slot_prime_done
         if not _slot_primed:
-            try:
-                async with httpx.AsyncClient(timeout=30.0) as prime_client:
-                    await prime_client.post(
-                        "http://127.0.0.1:8081/v1/chat/completions",
-                        json={
-                            "model": "nemotron",
-                            "messages": [{"role": "user", "content": "hi"}],
-                            "max_tokens": 1,
-                            "temperature": 0,
-                        },
-                    )
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning("Slot priming request failed (non-fatal): %s", e)
-            finally:
-                _slot_primed = True
+            _slot_primed = True  # set immediately so concurrent health polls don't also trigger priming
+            import asyncio
+            asyncio.ensure_future(_prime_slot())
+        if not _slot_prime_done:
+            return {"status": "priming", "detail": "VRAM loading — slot prime in progress"}
         return {"status": "ready"}
     if llama_loading:
         return {"status": "warming_up", "detail": "loading tensors into VRAM"}
@@ -391,10 +548,12 @@ def make_seed_runner(hf_token: str):
         import shutil
         from huggingface_hub import snapshot_download
 
-        model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
         model_dir = "/runpod-volume/models"
+        # model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+        model_path = "/runpod-volume/models/UD-IQ4_XS/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
         model_repo_id = "unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF"
-        allow_patterns = ["*UD-Q4_K_XL*"]
+        # allow_patterns = ["*UD-Q4_K_XL*"]
+        allow_patterns = ["*UD-IQ4_XS*"]
         volume_cache = "/runpod-volume/cache/llama-server"
         _clean_binary = (payload or {}).get("clean_binary", False)
         _clean_model = (payload or {}).get("clean_model", False)
@@ -409,12 +568,41 @@ def make_seed_runner(hf_token: str):
 
         # Build and cache llama-server binary to volume so inference workers
         # never need to compile on cold start. Idempotent: skips if already cached.
+        #
+        # NOTE: the seed function runs as a serialized closure — /app/patches/ does not
+        # exist on the seed worker. Build steps are inlined here instead of calling the
+        # shell script. Keep in sync with patches/install_llama_server.sh.
         binary_was_cached = os.path.exists(volume_cache)
         if not binary_was_cached:
-            subprocess.run(
-                ["bash", "/app/patches/install_llama_server.sh"],
-                check=True,
-            )
+            import sys
+            build_dir = "/tmp/llama-cpp-build"
+            install_dir = "/app"
+            binary = f"{install_dir}/llama-server"
+
+            # system cmake 3.22 (Ubuntu 22.04) is too old — need >=3.28
+            subprocess.run([sys.executable, "-m", "pip", "install", "cmake>=3.28"], check=True)
+
+            subprocess.run(["git", "clone", "--depth", "1",
+                            "https://github.com/ggml-org/llama.cpp.git", build_dir], check=True)
+
+            # sm_90=H200, sm_100=B200, sm_120=RTX Pro 6000 Blackwell
+            subprocess.run(["cmake", build_dir, "-B", f"{build_dir}/build",
+                            "-DBUILD_SHARED_LIBS=OFF", "-DGGML_CUDA=ON",
+                            "-DCMAKE_CUDA_ARCHITECTURES=90;100;120"], check=True)
+
+            subprocess.run(["cmake", "--build", f"{build_dir}/build",
+                            "--config", "Release", f"-j{os.cpu_count() or 4}",
+                            "--target", "llama-server"], check=True)
+
+            os.makedirs(install_dir, exist_ok=True)
+            shutil.copy(f"{build_dir}/build/bin/llama-server", binary)
+            os.chmod(binary, 0o755)
+
+            os.makedirs(os.path.dirname(volume_cache), exist_ok=True)
+            shutil.copy(binary, volume_cache)
+            os.chmod(volume_cache, 0o755)
+
+            shutil.rmtree(build_dir, ignore_errors=True)
 
         model_was_present = os.path.exists(model_path)
         if not model_was_present:

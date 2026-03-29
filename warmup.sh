@@ -1,146 +1,223 @@
 #!/usr/bin/env bash
-# warmup.sh — Warm up the nemotron endpoint and keep it alive.
-#
-# Keep this script running in a terminal for the duration of your session.
-# Press Ctrl+C when done — it will automatically scale the endpoint to 0 workers.
+# warmup.sh — minimal warmup flow with stable-ready gating.
 #
 # Usage:
-#   bash warmup.sh                              # uses default endpoint ID, loads RUNPOD_API_KEY from .env
-#   bash warmup.sh <endpoint-id>               # specify a different endpoint ID
-#   RUNPOD_API_KEY=rp_... bash warmup.sh       # pass API key inline
-#   RUNPOD_API_KEY=rp_... bash warmup.sh <id>  # both
+#   bash warmup.sh [endpoint-id|endpoint-url]
+# Env:
+#   RUNPOD_API_KEY=...
+#   NEMOTRON_ENDPOINT=https://<id>.api.runpod.ai
+#   WARMUP_RECYCLE_ON_START=1      # default 1 (force 0->1 rollout)
+#   WARMUP_READY_STABLE_POLLS=3    # default 3 consecutive ready polls
+#   WARMUP_POLL_INTERVAL=10        # seconds
 
 set -euo pipefail
 
-# Load .env if present and RUNPOD_API_KEY is not already set
-if [[ -z "${RUNPOD_API_KEY:-}" ]] && [[ -f "$(dirname "$0")/.env" ]]; then
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+RUNPOD_REST_API="https://rest.runpod.io/v1"
+RUNPOD_V2_API="https://api.runpod.ai/v2"
+DEFAULT_ENDPOINT_ID="c1fb77ul6l2dw2"
+POLL_INTERVAL="${WARMUP_POLL_INTERVAL:-10}"
+READY_STABLE_POLLS="${WARMUP_READY_STABLE_POLLS:-3}"
+MAX_WORKERS="${WARMUP_MAX_WORKERS:-2}"
+WARMUP_LOG_FILE="${WARMUP_LOG_FILE:-}"
+LOG_EVERY_POLLS="${WARMUP_LOG_EVERY_POLLS:-3}"
+VERBOSE_COUNTS="${WARMUP_VERBOSE_COUNTS:-0}"
+
+extract_endpoint_id() {
+    local raw="$1"
+    raw="${raw#http://}"
+    raw="${raw#https://}"
+    raw="${raw%%/*}"
+    raw="${raw%%.api.runpod.ai}"
+    echo "${raw}"
+}
+
+if [[ -z "${RUNPOD_API_KEY:-}" ]] && [[ -f "${SCRIPT_DIR}/.env" ]]; then
     # shellcheck source=.env
-    set -a; source "$(dirname "$0")/.env"; set +a
+    set -a; source "${SCRIPT_DIR}/.env"; set +a
 fi
 
-DEFAULT_ENDPOINT_ID="hf1ui3wrdsa31u"
-ENDPOINT_ID="${1:-${DEFAULT_ENDPOINT_ID}}"
+_manifest_endpoint="$(python3 -c '
+import json,sys
+try:
+    with open(sys.argv[1]) as f:
+        d = json.load(f)
+    eps = d.get("resources_endpoints") or {}
+    print(eps.get("gpu_api") or next(iter(eps.values()), ""))
+except Exception:
+    print("")
+' "${SCRIPT_DIR}/.flash/flash_manifest.json" 2>/dev/null || true)"
+_endpoint_input="${1:-${NEMOTRON_ENDPOINT:-${_manifest_endpoint:-${DEFAULT_ENDPOINT_ID}}}}"
+ENDPOINT_ID="$(extract_endpoint_id "${_endpoint_input}")"
 ENDPOINT="https://${ENDPOINT_ID}.api.runpod.ai"
-RUNPOD_REST_API="https://rest.runpod.io/v1"
-RUNPOD_GRAPHQL_API="https://api.runpod.io/graphql"
-# GPU types are read from nemotron.py at runtime — single source of truth
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-mapfile -t GPU_TYPES < <(python3 "${SCRIPT_DIR}/nemotron.py" gpu-types 2>/dev/null || true)
 
 if [[ -z "${RUNPOD_API_KEY:-}" ]]; then
     echo "Error: RUNPOD_API_KEY is not set."
-    echo "Usage: RUNPOD_API_KEY=rp_... bash warmup.sh"
     exit 1
 fi
+
+log() {
+    local msg="$*"
+    echo "${msg}"
+    if [[ -n "${WARMUP_LOG_FILE}" ]]; then
+        echo "${msg}" >> "${WARMUP_LOG_FILE}"
+    fi
+}
+
+fetch_worker_counts() {
+    local counts
+    counts="$( (curl -sS --connect-timeout 5 --max-time 6 "${RUNPOD_V2_API}/${ENDPOINT_ID}/health" \
+        -H "Authorization: Bearer ${RUNPOD_API_KEY}" 2>/dev/null || true) \
+        | python3 -c '
+import json,sys
+try:
+    w=(json.load(sys.stdin).get("workers") or {})
+    print(
+        f"{int(w.get('ready', 0))} "
+        f"{int(w.get('initializing', 0))} "
+        f"{int(w.get('running', 0))} "
+        f"{int(w.get('unhealthy', 0))}"
+    )
+except Exception:
+    print("0 0 0 0")
+')"
+    [[ -n "${counts}" ]] || counts="0 0 0 0"
+    echo "${counts}"
+}
 
 scale() {
     local min=$1 max=$2
     local result
-    result=$(curl -s -X PATCH "${RUNPOD_REST_API}/endpoints/${ENDPOINT_ID}" \
+    result="$(curl -sS --connect-timeout 5 --max-time 20 -X PATCH "${RUNPOD_REST_API}/endpoints/${ENDPOINT_ID}" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${RUNPOD_API_KEY}" \
-        -d "{\"workersMin\": ${min}, \"workersMax\": ${max}}")
+        -d "{\"workersMin\": ${min}, \"workersMax\": ${max}}")"
     local actual_min actual_max
-    actual_min=$(echo "${result}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['workersMin'])" 2>/dev/null || echo "?")
-    actual_max=$(echo "${result}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['workersMax'])" 2>/dev/null || echo "?")
-    echo "    workers: min=${actual_min} max=${actual_max}"
+    actual_min="$(echo "${result}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("workersMin","?"))' 2>/dev/null || echo "?")"
+    actual_max="$(echo "${result}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("workersMax","?"))' 2>/dev/null || echo "?")"
+    log "    workers: min=${actual_min} max=${actual_max}"
 }
 
 _scaled_down=false
 scale_down() {
     [[ "${_scaled_down}" == "true" ]] && return
     _scaled_down=true
-    echo ""
-    echo "==> Scaling endpoint to 0 workers..."
-    scale 0 2
-    echo "==> Endpoint scaled to 0. Goodbye!"
+    log ""
+    log "==> Scaling down to 0 workers..."
+    scale 0 "${MAX_WORKERS}" || true
+    log "==> Scaled down."
 }
-
 trap scale_down INT TERM EXIT
 
-echo "==> Checking GPU stock availability..."
-if [[ "${#GPU_TYPES[@]}" -eq 0 ]]; then
-    echo "    (could not read GPU types from nemotron.py)"
-else
-    # Fetch stock for all GPU types, then sort High first
-    _stock_lines=()
-    for _gpu in "${GPU_TYPES[@]}"; do
-        _stock=$(curl -s -X POST "${RUNPOD_GRAPHQL_API}?api_key=${RUNPOD_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d "{\"query\":\"{ gpuTypes(input: {id: \\\"${_gpu}\\\"}) { lowestPrice(input: {gpuCount: 1, minMemoryInGb: 8, minVcpuCount: 2, secureCloud: false}) { stockStatus } } }\"}" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['gpuTypes'][0]['lowestPrice']['stockStatus'] or 'Unavailable')" 2>/dev/null || echo "unknown")
-        # Prefix with sort key: 0=High, 1=Low, 2=other
-        if [[ "${_stock}" == "High" ]]; then
-            _stock_lines+=("0    ${_gpu} — stock: High (worker should start within 2–5 min)")
-        elif [[ "${_stock}" == "Low" ]]; then
-            _stock_lines+=("1    ${_gpu} — stock: Low (expect longer wait, may take 10–20+ min)")
-        elif [[ "${_stock}" == "Unavailable" ]]; then
-            _stock_lines+=("3    ${_gpu} — stock: Unavailable (no GPUs in pool)")
-        else
-            _stock_lines+=("2    ${_gpu} — stock: ${_stock}")
-        fi
-    done
-    # Print sorted (High first), stripping the sort key prefix
-    printf '%s\n' "${_stock_lines[@]}" | sort | sed 's/^[0-9]//'
+if [[ -n "${WARMUP_LOG_FILE}" ]]; then
+    mkdir -p "$(dirname "${WARMUP_LOG_FILE}")"
 fi
 
-echo "==> Scaling endpoint to 1 worker (max 2 for overflow)..."
-scale 1 2
+log "==> Target endpoint: ${ENDPOINT}"
+if [[ "${WARMUP_RECYCLE_ON_START:-1}" == "1" ]]; then
+    log "==> Recycling workers (0 -> 1)..."
+    scale 0 "${MAX_WORKERS}"
+    sleep 2
+fi
+log "==> Scaling up to 1 worker..."
+scale 1 "${MAX_WORKERS}"
 
-_wait_start=$(date +%s)
-echo "==> Waiting for worker to start, then triggering warmup (polling every 10s)..."
-echo "    Started waiting at $(date +%H:%M:%S) — GPU allocation typically takes 2–5 min, then model load ~5–10 min"
-
-ready=false
+log "==> Waiting for stable ready..."
+ready_streak=0
 warmup_sent=false
+last_warmup_code=""
+_wait_start=$(date +%s)
+last_status="(init)"
+poll_counter=0
 
 while true; do
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" "${ENDPOINT}/health" \
-        -H "Authorization: Bearer ${RUNPOD_API_KEY}" 2>/dev/null || echo "000")
+    poll_counter=$((poll_counter + 1))
+    read -r w_ready w_init w_run w_unhealthy < <(fetch_worker_counts)
+    status="$( (curl -sS --connect-timeout 5 --max-time 25 "${ENDPOINT}/health" \
+        -H "Authorization: Bearer ${RUNPOD_API_KEY}" 2>/dev/null || true) \
+        | python3 -c '
+import json,sys
+try:
+    print(json.load(sys.stdin).get("status", "starting"))
+except Exception:
+    print("starting")
+')"
+    [[ -n "${status}" ]] || status="starting"
+    [[ "${status}" == "unknown" ]] && status="starting"
 
-    if [[ "${http_code}" == "502" || "${http_code}" == "503" || "${http_code}" == "504" || "${http_code}" == "000" ]]; then
-        status="starting"
-    else
-        status=$(curl -s "${ENDPOINT}/health" \
-            -H "Authorization: Bearer ${RUNPOD_API_KEY}" \
-            | python3 -c "
-import sys, json
-try: print(json.load(sys.stdin).get('status', 'unknown'))
-except: print('unknown')
-" 2>/dev/null || echo "unknown")
-    fi
-
-    # Send warmup once the worker is reachable but not yet ready
-    if [[ "${warmup_sent}" == "false" && "${status}" != "starting" ]]; then
-        echo "    $(date +%H:%M:%S) — worker up, triggering warmup..."
-        curl -s -X POST "${ENDPOINT}/warmup" \
+    if [[ "${warmup_sent}" == "false" && "${status}" == "cold" ]]; then
+        log "    $(date +%H:%M:%S) — triggering warmup..."
+        warmup_code="$(curl -sS --connect-timeout 5 --max-time 25 -o /dev/null -w "%{http_code}" -X POST "${ENDPOINT}/warmup" \
             -H "Authorization: Bearer ${RUNPOD_API_KEY}" \
             -H "Content-Type: application/json" \
-            -d '{}' > /dev/null
-        warmup_sent=true
+            -d '{}' 2>/dev/null || true)"
+        if [[ "${warmup_code}" == "200" ]]; then
+            warmup_sent=true
+            last_warmup_code=""
+        else
+            if [[ "${warmup_code:-000}" != "${last_warmup_code}" ]]; then
+                log "    $(date +%H:%M:%S) — warmup pending (HTTP ${warmup_code:-000}), will retry"
+                last_warmup_code="${warmup_code:-000}"
+            fi
+        fi
     fi
 
-    if [[ "${ready}" == "false" ]]; then
-        _elapsed=$(( $(date +%s) - _wait_start ))
-        _elapsed_fmt=$(printf "%dm%02ds" $(( _elapsed / 60 )) $(( _elapsed % 60 )))
-        echo "    $(date +%H:%M:%S) [${_elapsed_fmt}] — ${status}"
+    if [[ "${status}" == "ready" ]]; then
+        ready_streak=$((ready_streak + 1))
+    else
+        ready_streak=0
     fi
 
-    if [[ "${status}" == "ready" ]] && [[ "${ready}" == "false" ]]; then
-        ready=true
-        echo ""
-        echo "==> Ready! Nemotron is loaded and serving requests."
-        echo "    Keep this terminal open — Ctrl+C will scale down the endpoint and stop billing."
-        echo ""
+    status_display="${status}"
+    if [[ "${status}" == "starting" ]]; then
+        if (( w_ready > 0 )); then
+            status_display="starting (LB pending; workers ready=${w_ready})"
+        elif (( w_init > 0 || w_run > 0 )); then
+            status_display="starting (workers init=${w_init} run=${w_run})"
+        fi
     fi
 
-    if [[ "${ready}" == "false" ]]; then
-        # Keep the LB scaler from scaling to zero while model is still loading
-        curl -s -X POST "${ENDPOINT}/keepalive" \
+    _elapsed=$(( $(date +%s) - _wait_start ))
+    _elapsed_fmt=$(printf "%dm%02ds" $(( _elapsed / 60 )) $(( _elapsed % 60 )))
+    should_log=false
+    if [[ "${status_display}" != "${last_status}" ]]; then
+        should_log=true
+    elif (( poll_counter % LOG_EVERY_POLLS == 0 )); then
+        should_log=true
+    fi
+
+    if [[ "${should_log}" == "true" ]]; then
+        if [[ "${VERBOSE_COUNTS}" == "1" ]]; then
+            log "    $(date +%H:%M:%S) [${_elapsed_fmt}] — ${status_display} (workers ready=${w_ready} init=${w_init} run=${w_run} unhealthy=${w_unhealthy})"
+        else
+            log "    $(date +%H:%M:%S) [${_elapsed_fmt}] — ${status_display}"
+        fi
+    fi
+    if [[ "${status_display}" != "${last_status}" ]]; then
+        log "    $(date +%H:%M:%S) — status change: ${last_status} -> ${status_display}"
+        last_status="${status_display}"
+    fi
+
+    if [[ "${status}" == "ready" && ${ready_streak} -lt ${READY_STABLE_POLLS} ]]; then
+        log "    $(date +%H:%M:%S) — ready candidate (${ready_streak}/${READY_STABLE_POLLS})"
+    fi
+    if [[ "${status}" == "ready" && ${ready_streak} -ge ${READY_STABLE_POLLS} ]]; then
+        log ""
+        log "==> Ready and stable."
+        log "    Keep this terminal open; Ctrl+C scales down to 0 workers."
+        break
+    fi
+    if [[ "${status}" != "ready" ]]; then
+        # Protect against premature scale-to-zero while model is loading.
+        curl -sS --connect-timeout 5 --max-time 10 -X POST "${ENDPOINT}/keepalive" \
             -H "Authorization: Bearer ${RUNPOD_API_KEY}" \
             -H "Content-Type: application/json" \
             -d '{}' > /dev/null 2>&1 || true
     fi
 
-    sleep 10
+    sleep "${POLL_INTERVAL}"
+done
+
+while true; do
+    sleep 30
 done
