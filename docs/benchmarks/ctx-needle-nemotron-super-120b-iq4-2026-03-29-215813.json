@@ -1,0 +1,175 @@
+{
+  "timestamp_utc": "2026-03-29T20:00:53.642679+00:00",
+  "endpoint": "https://c1fb77ul6l2dw2.api.runpod.ai",
+  "endpoint_id": "c1fb77ul6l2dw2",
+  "endpoint_source": "NEMOTRON_BENCH_ENDPOINT",
+  "model": "nemotron-super-120b-iq4",
+  "model_source": "default",
+  "label": "p2-ctx100k-needle-r3-max128",
+  "runtime_config": {
+    "n_gpu_layers": 99,
+    "parallel": 2,
+    "ctx_size": 100000,
+    "flash_attn": "on"
+  },
+  "samples_per_context": 1,
+  "contexts_requested": [
+    6000,
+    9000,
+    12000,
+    15000,
+    18000
+  ],
+  "needle_position": 0.85,
+  "max_tokens": 128,
+  "request_timeout_s": 180.0,
+  "degradation_exact_drop_pp": 20.0,
+  "degradation_latency_ratio": 2.0,
+  "contexts": [
+    {
+      "target_ctx": 6000,
+      "samples": 1,
+      "contains_passed": 1,
+      "exact_passed": 1,
+      "contains_pass_pct": 100.0,
+      "exact_pass_pct": 100.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 7867,
+      "avg_latency_s": 20.562,
+      "avg_tok_s": 6.23,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-6000-1-66a59bd6",
+          "response": "NEEDLE-6000-1-66a59bd6",
+          "contains_needle": true,
+          "exact_match": true,
+          "latency_s": 20.562,
+          "prompt_tokens": 7867,
+          "completion_tokens": 128,
+          "tok_s": 6.23,
+          "finish_reason": "stop",
+          "error": ""
+        }
+      ],
+      "degradation": "baseline"
+    },
+    {
+      "target_ctx": 9000,
+      "samples": 1,
+      "contains_passed": 1,
+      "exact_passed": 1,
+      "contains_pass_pct": 100.0,
+      "exact_pass_pct": 100.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 11971,
+      "avg_latency_s": 11.617,
+      "avg_tok_s": 11.02,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-9000-1-626bfb87",
+          "response": "NEEDLE-9000-1-626bfb87",
+          "contains_needle": true,
+          "exact_match": true,
+          "latency_s": 11.617,
+          "prompt_tokens": 11971,
+          "completion_tokens": 128,
+          "tok_s": 11.02,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "-"
+    },
+    {
+      "target_ctx": 12000,
+      "samples": 1,
+      "contains_passed": 1,
+      "exact_passed": 1,
+      "contains_pass_pct": 100.0,
+      "exact_pass_pct": 100.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 16076,
+      "avg_latency_s": 17.99,
+      "avg_tok_s": 6.39,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-12000-1-cb1435a8",
+          "response": "NEEDLE-12000-1-cb1435a8",
+          "contains_needle": true,
+          "exact_match": true,
+          "latency_s": 17.99,
+          "prompt_tokens": 16076,
+          "completion_tokens": 115,
+          "tok_s": 6.39,
+          "finish_reason": "stop",
+          "error": ""
+        }
+      ],
+      "degradation": "-"
+    },
+    {
+      "target_ctx": 15000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 20123,
+      "avg_latency_s": 25.64,
+      "avg_tok_s": 4.99,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-15000-1-46cff95f",
+          "response": "NEEDLE-15000-1-46c",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 25.64,
+          "prompt_tokens": 20123,
+          "completion_tokens": 128,
+          "tok_s": 4.99,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "exact-drop-100.0pp"
+    },
+    {
+      "target_ctx": 18000,
+      "samples": 1,
+      "contains_passed": 1,
+      "exact_passed": 1,
+      "contains_pass_pct": 100.0,
+      "exact_pass_pct": 100.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 24169,
+      "avg_latency_s": 83.76,
+      "avg_tok_s": 1.53,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-18000-1-1448beba",
+          "response": "NEEDLE-18000-1-1448beba",
+          "contains_needle": true,
+          "exact_match": true,
+          "latency_s": 83.76,
+          "prompt_tokens": 24169,
+          "completion_tokens": 128,
+          "tok_s": 1.53,
+          "finish_reason": "stop",
+          "error": ""
+        }
+      ],
+      "degradation": "latency-x4.07"
+    }
+  ]
+}

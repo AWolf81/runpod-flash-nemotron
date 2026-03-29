@@ -1,0 +1,175 @@
+{
+  "timestamp_utc": "2026-03-29T20:47:00.344268+00:00",
+  "endpoint": "https://c1fb77ul6l2dw2.api.runpod.ai",
+  "endpoint_id": "c1fb77ul6l2dw2",
+  "endpoint_source": "NEMOTRON_BENCH_ENDPOINT",
+  "model": "nemotron-super-120b-iq4",
+  "model_source": "default",
+  "label": "p1-ctx100k-rerun-b-up100k",
+  "runtime_config": {
+    "n_gpu_layers": 99,
+    "parallel": 1,
+    "ctx_size": 100000,
+    "flash_attn": "on"
+  },
+  "samples_per_context": 1,
+  "contexts_requested": [
+    55000,
+    60000,
+    65000,
+    70000,
+    74000
+  ],
+  "needle_position": 0.85,
+  "max_tokens": 128,
+  "request_timeout_s": 180.0,
+  "degradation_exact_drop_pp": 20.0,
+  "degradation_latency_ratio": 2.0,
+  "contexts": [
+    {
+      "target_ctx": 55000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 74387,
+      "avg_latency_s": 42.377,
+      "avg_tok_s": 3.02,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-55000-1-400cf995",
+          "response": "",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 42.377,
+          "prompt_tokens": 74387,
+          "completion_tokens": 128,
+          "tok_s": 3.02,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "baseline"
+    },
+    {
+      "target_ctx": 60000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 81171,
+      "avg_latency_s": 55.16,
+      "avg_tok_s": 2.32,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-60000-1-7755e0c0",
+          "response": "",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 55.16,
+          "prompt_tokens": 81171,
+          "completion_tokens": 128,
+          "tok_s": 2.32,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "-"
+    },
+    {
+      "target_ctx": 65000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 88009,
+      "avg_latency_s": 54.041,
+      "avg_tok_s": 2.37,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-65000-1-e366bc20",
+          "response": "",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 54.041,
+          "prompt_tokens": 88009,
+          "completion_tokens": 128,
+          "tok_s": 2.37,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "-"
+    },
+    {
+      "target_ctx": 70000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 94792,
+      "avg_latency_s": 52.678,
+      "avg_tok_s": 2.43,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-70000-1-ff3cc876",
+          "response": "",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 52.678,
+          "prompt_tokens": 94792,
+          "completion_tokens": 128,
+          "tok_s": 2.43,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "-"
+    },
+    {
+      "target_ctx": 74000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 1,
+      "avg_prompt_tokens": 0,
+      "avg_latency_s": 1.431,
+      "avg_tok_s": 0.0,
+      "first_error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (100207 tokens) exceeds the available context size (100096 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":100207,\"n_ctx\":100096}}'}",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-74000-1-e9ae6b7d",
+          "response": "",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 1.431,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "tok_s": 0.0,
+          "finish_reason": null,
+          "error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (100207 tokens) exceeds the available context size (100096 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":100207,\"n_ctx\":100096}}'}"
+        }
+      ],
+      "degradation": "limit-hit"
+    }
+  ]
+}

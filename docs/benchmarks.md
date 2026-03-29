@@ -1,6 +1,6 @@
 # Nemotron Endpoint Benchmarks
 
-Reference for cold start timing, volume throughput, --mlock evaluation, warmup cost analysis, and HumanEval coding benchmarks.
+Reference for cold start timing, volume throughput, --mlock evaluation, warmup cost analysis, HumanEval coding benchmarks, and long-context retrieval checks.
 
 ---
 
@@ -54,7 +54,58 @@ python scripts/humaneval.py --n 20 --workers 1 --failures
 python scripts/humaneval.py --n 164 --max-tokens 2048 --failures --label p2-ctx100k-2k
 ```
 
-Results are appended automatically to [docs/benchmarks/humaneval-summary.md](benchmarks/humaneval-summary.md).
+Results are appended to [docs/benchmarks/humaneval-summary.md](benchmarks/humaneval-summary.md). This table is intentionally curated to only keep decision-relevant runs.
+
+## Context Size Needle Benchmark (CTX Limit + Degradation)
+
+HumanEval is a coding benchmark, not a long-context retrieval benchmark.  
+For context-window feasibility and degradation, run `scripts/ctx_needle.py`.
+
+What this measures:
+- Whether a given prompt size can run at all (request errors usually indicate context cap).
+- Whether retrieval quality drops as context grows (needle match rate).
+- Latency trend versus the smallest successful context in the sweep.
+
+### Commands
+
+```bash
+# 1) Validate p2 / ctx100k runtime
+LLAMA_PARALLEL=2 LLAMA_CTX_SIZE=100000 flash deploy --env production
+NEMOTRON_BENCH_ENDPOINT="https://c1fb77ul6l2dw2.api.runpod.ai" \
+python scripts/ctx_needle.py \
+  --contexts 32768,65536,90000,100000,115000 \
+  --samples 2 \
+  --label p2-ctx100k-needle
+
+# 2) Validate p1 / ctx131072 runtime (~130k feasibility target)
+LLAMA_PARALLEL=1 LLAMA_CTX_SIZE=131072 flash deploy --env production
+NEMOTRON_BENCH_ENDPOINT="https://c1fb77ul6l2dw2.api.runpod.ai" \
+python scripts/ctx_needle.py \
+  --contexts 32768,65536,100000,115000,130000 \
+  --samples 2 \
+  --label p1-ctx131072-needle
+```
+
+Outputs:
+- JSON artifact: `docs/benchmarks/ctx-needle-*.json`
+- Markdown summary: `docs/benchmarks/ctx-needle-summary.md`
+
+### Latest Context-Cap Summary (2026-03-29)
+
+Measured with `scripts/ctx_needle.py` on warmed workers (single-request `p1`), using prompt-token counts reported by the API.
+
+| Runtime | Recommended safe prompt size | Max observed without context error | Hard fail limit observed | Notes |
+|---|---:|---:|---:|---|
+| `p2/ctx100000` | ~40k prompt tokens (provisional) | **24,169** prompt tokens | **88,694** prompt tokens (`n_ctx=50176`) | `~50k` behaves like a fail boundary on this setup; treat p2 as experimental until re-validated. |
+| `p1/ctx100000` | ~90k prompt tokens | **94,792** prompt tokens | **100,207** prompt tokens (`n_ctx=100096`) | Practical boundary is very close to 100k; keep headroom for tokenizer variance. |
+| `p1/ctx131072` | ~125k prompt tokens | **130,076** prompt tokens | **132,755** prompt tokens (`n_ctx=131072`) | Upper range works, but some high-end probes intermittently hit host-level 502 before retry/cap-probe confirmation. |
+
+Interpretation:
+- **p1 recommendation**: use ~**65k prompt tokens** as the default for agentic workflows; reserve 100k+ for exceptional long-context tasks.
+- For `p2`, **~50k is not a safe target** on current evidence; it aligns with the observed failure boundary (`n_ctx=50176`), not a comfort zone.
+- If you want predictable behavior, target the **safe** column.
+- If you want absolute edge testing, use values near the **max observed** column and expect occasional instability.
+- Any request above the **hard fail** boundary is rejected by llama-server with `exceed_context_size_error`.
 
 ---
 

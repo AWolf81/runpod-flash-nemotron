@@ -1,0 +1,205 @@
+{
+  "timestamp_utc": "2026-03-29T20:13:44.671590+00:00",
+  "endpoint": "https://c1fb77ul6l2dw2.api.runpod.ai",
+  "endpoint_id": "c1fb77ul6l2dw2",
+  "endpoint_source": "NEMOTRON_BENCH_ENDPOINT",
+  "model": "nemotron-super-120b-iq4",
+  "model_source": "default",
+  "label": "p1-ctx100k-needle-r1",
+  "runtime_config": {
+    "n_gpu_layers": 99,
+    "parallel": 1,
+    "ctx_size": 100000,
+    "flash_attn": "on"
+  },
+  "samples_per_context": 1,
+  "contexts_requested": [
+    20000,
+    26000,
+    32768,
+    40000,
+    45000,
+    50000
+  ],
+  "needle_position": 0.85,
+  "max_tokens": 128,
+  "request_timeout_s": 180.0,
+  "degradation_exact_drop_pp": 20.0,
+  "degradation_latency_ratio": 2.0,
+  "contexts": [
+    {
+      "target_ctx": 20000,
+      "samples": 1,
+      "contains_passed": 1,
+      "exact_passed": 1,
+      "contains_pass_pct": 100.0,
+      "exact_pass_pct": 100.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 26905,
+      "avg_latency_s": 53.474,
+      "avg_tok_s": 2.39,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-20000-1-df9c4ec2",
+          "response": "NEEDLE-20000-1-df9c4ec2",
+          "contains_needle": true,
+          "exact_match": true,
+          "latency_s": 53.474,
+          "prompt_tokens": 26905,
+          "completion_tokens": 128,
+          "tok_s": 2.39,
+          "finish_reason": "stop",
+          "error": ""
+        }
+      ],
+      "degradation": "baseline"
+    },
+    {
+      "target_ctx": 26000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 1,
+      "avg_prompt_tokens": 0,
+      "avg_latency_s": 0.956,
+      "avg_tok_s": 0.0,
+      "first_error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (35056 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":35056,\"n_ctx\":32768}}'}",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-26000-1-4ac531ab",
+          "response": "",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 0.956,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "tok_s": 0.0,
+          "finish_reason": null,
+          "error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (35056 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":35056,\"n_ctx\":32768}}'}"
+        }
+      ],
+      "degradation": "limit-hit, exact-drop-100.0pp"
+    },
+    {
+      "target_ctx": 32768,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 1,
+      "avg_prompt_tokens": 0,
+      "avg_latency_s": 1.099,
+      "avg_tok_s": 0.0,
+      "first_error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (44235 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":44235,\"n_ctx\":32768}}'}",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-32768-1-78c793b2",
+          "response": "",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 1.099,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "tok_s": 0.0,
+          "finish_reason": null,
+          "error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (44235 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":44235,\"n_ctx\":32768}}'}"
+        }
+      ],
+      "degradation": "limit-hit, exact-drop-100.0pp"
+    },
+    {
+      "target_ctx": 40000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 1,
+      "avg_prompt_tokens": 0,
+      "avg_latency_s": 0.651,
+      "avg_tok_s": 0.0,
+      "first_error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (54095 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":54095,\"n_ctx\":32768}}'}",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-40000-1-dc0136f0",
+          "response": "",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 0.651,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "tok_s": 0.0,
+          "finish_reason": null,
+          "error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (54095 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":54095,\"n_ctx\":32768}}'}"
+        }
+      ],
+      "degradation": "limit-hit, exact-drop-100.0pp"
+    },
+    {
+      "target_ctx": 45000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 1,
+      "avg_prompt_tokens": 0,
+      "avg_latency_s": 0.688,
+      "avg_tok_s": 0.0,
+      "first_error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (60819 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":60819,\"n_ctx\":32768}}'}",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-45000-1-cefc83f8",
+          "response": "",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 0.688,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "tok_s": 0.0,
+          "finish_reason": null,
+          "error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (60819 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":60819,\"n_ctx\":32768}}'}"
+        }
+      ],
+      "degradation": "limit-hit, exact-drop-100.0pp"
+    },
+    {
+      "target_ctx": 50000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 1,
+      "avg_prompt_tokens": 0,
+      "avg_latency_s": 0.732,
+      "avg_tok_s": 0.0,
+      "first_error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (67605 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":67605,\"n_ctx\":32768}}'}",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-50000-1-692b9b2d",
+          "response": "",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 0.732,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "tok_s": 0.0,
+          "finish_reason": null,
+          "error": "BadRequestError: Error code: 400 - {'detail': 'llama-server error: {\"error\":{\"code\":400,\"message\":\"request (67605 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":67605,\"n_ctx\":32768}}'}"
+        }
+      ],
+      "degradation": "limit-hit, exact-drop-100.0pp"
+    }
+  ]
+}

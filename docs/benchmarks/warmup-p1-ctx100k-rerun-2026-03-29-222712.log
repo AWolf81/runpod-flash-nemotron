@@ -1,0 +1,32 @@
+==> Target endpoint: https://c1fb77ul6l2dw2.api.runpod.ai
+==> Recycling workers (0 -> 1)...
+    workers: min=0 max=0 standby=2
+==> Scaling up to 1 worker...
+    workers: min=1 max=2 standby=2
+==> Waiting for stable ready...
+    22:27:43 [0m26s] — starting
+    22:27:43 — status change: (init) -> starting
+    22:29:13 [1m56s] — starting
+    22:30:21 — triggering warmup...
+    22:30:22 [3m05s] — cold
+    22:30:22 — status change: starting -> cold
+    22:30:32 [3m15s] — warming_up
+    22:30:32 — status change: cold -> warming_up
+    22:31:05 [3m48s] — warming_up
+    22:31:39 [4m22s] — warming_up
+    22:32:12 [4m55s] — warming_up
+    22:32:45 [5m28s] — warming_up
+    22:32:56 [5m39s] — priming
+    22:32:56 — status change: warming_up -> priming
+    22:33:07 [5m50s] — ready
+    22:33:07 — status change: priming -> ready
+    22:33:07 — ready candidate (1/3)
+    22:33:17 [6m00s] — ready
+    22:33:17 — ready candidate (2/3)
+
+==> Ready and stable.
+    Keep this terminal open; Ctrl+C scales down to 0 workers.
+
+==> Scaling down to 0 workers...
+    workers: min=0 max=0 standby=2
+==> Scaled down.

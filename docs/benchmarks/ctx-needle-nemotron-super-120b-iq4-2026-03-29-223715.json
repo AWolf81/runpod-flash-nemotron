@@ -1,0 +1,205 @@
+{
+  "timestamp_utc": "2026-03-29T20:42:02.383663+00:00",
+  "endpoint": "https://c1fb77ul6l2dw2.api.runpod.ai",
+  "endpoint_id": "c1fb77ul6l2dw2",
+  "endpoint_source": "NEMOTRON_BENCH_ENDPOINT",
+  "model": "nemotron-super-120b-iq4",
+  "model_source": "default",
+  "label": "p1-ctx100k-rerun-a",
+  "runtime_config": {
+    "n_gpu_layers": 99,
+    "parallel": 1,
+    "ctx_size": 100000,
+    "flash_attn": "on"
+  },
+  "samples_per_context": 1,
+  "contexts_requested": [
+    20000,
+    26000,
+    32768,
+    40000,
+    45000,
+    50000
+  ],
+  "needle_position": 0.85,
+  "max_tokens": 128,
+  "request_timeout_s": 180.0,
+  "degradation_exact_drop_pp": 20.0,
+  "degradation_latency_ratio": 2.0,
+  "contexts": [
+    {
+      "target_ctx": 20000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 26907,
+      "avg_latency_s": 54.642,
+      "avg_tok_s": 2.34,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-20000-1-9e84a0f1",
+          "response": "NEEDLE-20000-1-",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 54.642,
+          "prompt_tokens": 26907,
+          "completion_tokens": 128,
+          "tok_s": 2.34,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "baseline"
+    },
+    {
+      "target_ctx": 26000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 35057,
+      "avg_latency_s": 42.85,
+      "avg_tok_s": 2.99,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-26000-1-3b98fcb8",
+          "response": "NEEDLE-26000-1-3b98",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 42.85,
+          "prompt_tokens": 35057,
+          "completion_tokens": 128,
+          "tok_s": 2.99,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "-"
+    },
+    {
+      "target_ctx": 32768,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 44234,
+      "avg_latency_s": 45.554,
+      "avg_tok_s": 2.81,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-32768-1-3d4646db",
+          "response": "NEEDLE-32768-1-3d46",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 45.554,
+          "prompt_tokens": 44234,
+          "completion_tokens": 128,
+          "tok_s": 2.81,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "-"
+    },
+    {
+      "target_ctx": 40000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 54096,
+      "avg_latency_s": 49.369,
+      "avg_tok_s": 2.59,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-40000-1-6d6e408d",
+          "response": "NEEDLE-40000-1-",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 49.369,
+          "prompt_tokens": 54096,
+          "completion_tokens": 128,
+          "tok_s": 2.59,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "-"
+    },
+    {
+      "target_ctx": 45000,
+      "samples": 1,
+      "contains_passed": 0,
+      "exact_passed": 0,
+      "contains_pass_pct": 0.0,
+      "exact_pass_pct": 0.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 60822,
+      "avg_latency_s": 47.602,
+      "avg_tok_s": 2.69,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-45000-1-6789e247",
+          "response": "NEEDLE-45000-1-",
+          "contains_needle": false,
+          "exact_match": false,
+          "latency_s": 47.602,
+          "prompt_tokens": 60822,
+          "completion_tokens": 128,
+          "tok_s": 2.69,
+          "finish_reason": "length",
+          "error": ""
+        }
+      ],
+      "degradation": "-"
+    },
+    {
+      "target_ctx": 50000,
+      "samples": 1,
+      "contains_passed": 1,
+      "exact_passed": 1,
+      "contains_pass_pct": 100.0,
+      "exact_pass_pct": 100.0,
+      "request_errors": 0,
+      "avg_prompt_tokens": 67603,
+      "avg_latency_s": 46.071,
+      "avg_tok_s": 2.78,
+      "first_error": "",
+      "cases": [
+        {
+          "sample": 1,
+          "needle": "NEEDLE-50000-1-bb45bdf6",
+          "response": "NEEDLE-50000-1-bb45bdf6",
+          "contains_needle": true,
+          "exact_match": true,
+          "latency_s": 46.071,
+          "prompt_tokens": 67603,
+          "completion_tokens": 128,
+          "tok_s": 2.78,
+          "finish_reason": "stop",
+          "error": ""
+        }
+      ],
+      "degradation": "-"
+    }
+  ]
+}
