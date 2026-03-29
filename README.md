@@ -11,8 +11,8 @@ What's missing before this could serve production traffic:
 | Gap | Impact |
 |-----|--------|
 | ~~No streaming (SSE)~~ | SSE streaming now supported via `StreamingResponse` — Claude Code and OpenCode stream by default |
-| 8–10 min cold starts | Unacceptable SLA for any user-facing product |
-| 1 parallel request slot (`--parallel 1`) | Concurrent requests queue behind each other |
+| Cold-start variance (00:22–08:12 in latest logs) | Unacceptable SLA for any user-facing product |
+| Concurrency not fully production-validated | `p2/ctx100k` is benchmarked on 1 worker (HumanEval pass@1 **57.9% on full 164 problems**, 78.9 tok/s avg), but 2-worker autoscale behavior is still variable/throttled; treat multi-worker throughput as experimental. See [docs/benchmarks/humaneval-summary.md](docs/benchmarks/humaneval-summary.md). |
 | EU-RO-1 datacenter only | No region failover; high latency from outside Europe |
 | No rate limiting or cost caps | A single runaway loop can run up an unbounded GPU bill |
 
@@ -71,7 +71,7 @@ This starts a temporary remote worker that:
 1. Builds `llama-server` from source and caches the binary to the volume
 2. Downloads the GGUF shards (~84 GB) from Hugging Face into the volume
 
-Both steps are idempotent — re-running `seed` skips anything already present and returns immediately. Cold starts after seeding restore the binary from the volume and load the model into VRAM (~10–16 min), with no download or build step. See [Cold Starts](#cold-starts-and-flashboot-limitation) for details.
+Both steps are idempotent — re-running `seed` skips anything already present and returns immediately. Cold starts after seeding restore the binary from the volume and load the model into VRAM, with no download or build step. Latest benchmark snapshot (2026-03-29): 00:22–08:12 from `warmup.sh` start to `Ready and stable`, avg 02:00. See [Cold Starts](#cold-starts-and-flashboot-limitation) for details.
 
 **CLI options:**
 
@@ -116,7 +116,7 @@ flash run --auto-provision
 curl http://localhost:8888/nemotron/v1/models
 ```
 
-The URL pattern is `http://localhost:8888/<function-name>/<route>`. This first request will block while the worker boots and loads the model (~20–30 min on first cold start while building llama-server, ~10–16 min on subsequent cold starts once the binary is cached and the preload optimization is in effect).
+The URL pattern is `http://localhost:8888/<function-name>/<route>`. This first request will block while the worker boots and loads the model (~20–30 min on first cold start while building llama-server, then variable warmup for subsequent starts depending on cache/state; latest snapshot: 00:22–08:12, avg 02:00).
 
 **Test inference:**
 
@@ -242,8 +242,8 @@ If a volume cache exists from a previous worker, this completes in seconds. Othe
 **Important:** do not offload layers to CPU — it explodes the compute buffer from ~282 MiB to ~2,500 MiB and causes CUDA OOM. Keep all layers on GPU and move the KV cache to RAM instead:
 
 ```bash
-# Loading takes 8–10 minutes. The bottleneck is reading 78 GiB of model
-# weights from the network volume (backed by S3) at ~0.4 GB/s into GPU VRAM.
+# Loading time is variable by cache/worker state.
+# Latest warmup snapshot: 00:22–08:12 (avg 02:00) from warmup start to ready.
 /app/llama-server \
   --model /runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf \
   --host 127.0.0.1 --port 8081 \
@@ -328,6 +328,33 @@ Generation speed (n=20):
 The script reads `RUNPOD_API_KEY` from the environment or `.env`. Override the endpoint with `NEMOTRON_ENDPOINT=https://...`.
 
 ## Cold Starts and FlashBoot Limitation
+
+### Current Snapshot (2026-03-29)
+
+Measured from `warmup.sh` start until `Ready and stable` in `docs/benchmarks/warmup-*.log`.
+
+- All ready runs: **22 samples**
+  min **00:22**, max **08:12**, avg **02:00**, median **01:32**
+- Benchmark-labeled runs (excluding `probe-*` and `verify-*`): **17 samples**
+  min **00:22**, max **05:29**, avg **01:44**, median **01:29**
+
+Tracked artifacts:
+
+- [docs/benchmarks/cold-start-times.csv](docs/benchmarks/cold-start-times.csv)
+- [docs/benchmarks/cold-start-summary.md](docs/benchmarks/cold-start-summary.md)
+
+Refresh command (use this after weekday reruns):
+
+```bash
+python scripts/coldstart_stats.py
+```
+
+Capture new weekday samples with:
+
+```bash
+WARMUP_LOG_FILE="docs/benchmarks/warmup-weekday-$(date +%Y-%m-%d-%H%M%S).log" \
+bash warmup.sh c1fb77ul6l2dw2
+```
 
 Cold start cost (model load from network volume into GPU VRAM):
 

@@ -1,0 +1,110 @@
+{
+  "endpoint": "https://c1fb77ul6l2dw2.api.runpod.ai",
+  "model": "nemotron-super-120b-iq4",
+  "n_problems": 20,
+  "passed": 17,
+  "pass_at_1_pct": 85.0,
+  "avg_tok_s": 37.47,
+  "results": {
+    "HumanEval/0": {
+      "passed": true,
+      "tok_s": 39.01070380693906,
+      "error": null
+    },
+    "HumanEval/1": {
+      "passed": false,
+      "tok_s": 40.76577953135027,
+      "error": "failed: "
+    },
+    "HumanEval/2": {
+      "passed": true,
+      "tok_s": 40.4103770293551,
+      "error": null
+    },
+    "HumanEval/3": {
+      "passed": true,
+      "tok_s": 36.34715605591356,
+      "error": null
+    },
+    "HumanEval/4": {
+      "passed": true,
+      "tok_s": 37.38064938749055,
+      "error": null
+    },
+    "HumanEval/5": {
+      "passed": true,
+      "tok_s": 38.7553761131865,
+      "error": null
+    },
+    "HumanEval/6": {
+      "passed": false,
+      "tok_s": 39.77646002061986,
+      "error": "failed: '(' was never closed (<string>, line 39)"
+    },
+    "HumanEval/7": {
+      "passed": true,
+      "tok_s": 36.887074916366444,
+      "error": null
+    },
+    "HumanEval/8": {
+      "passed": true,
+      "tok_s": 36.025044145696185,
+      "error": null
+    },
+    "HumanEval/9": {
+      "passed": true,
+      "tok_s": 37.90730497880801,
+      "error": null
+    },
+    "HumanEval/10": {
+      "passed": false,
+      "tok_s": 38.39389221899587,
+      "error": "failed: "
+    },
+    "HumanEval/11": {
+      "passed": true,
+      "tok_s": 37.94273850788292,
+      "error": null
+    },
+    "HumanEval/12": {
+      "passed": true,
+      "tok_s": 38.28137898762718,
+      "error": null
+    },
+    "HumanEval/13": {
+      "passed": true,
+      "tok_s": 32.71647639471819,
+      "error": null
+    },
+    "HumanEval/14": {
+      "passed": true,
+      "tok_s": 35.52619499625512,
+      "error": null
+    },
+    "HumanEval/15": {
+      "passed": true,
+      "tok_s": 35.328227350521665,
+      "error": null
+    },
+    "HumanEval/16": {
+      "passed": true,
+      "tok_s": 35.71325295271488,
+      "error": null
+    },
+    "HumanEval/17": {
+      "passed": true,
+      "tok_s": 37.46621176085684,
+      "error": null
+    },
+    "HumanEval/18": {
+      "passed": true,
+      "tok_s": 36.99409932277244,
+      "error": null
+    },
+    "HumanEval/19": {
+      "passed": true,
+      "tok_s": 37.8667445608987,
+      "error": null
+    }
+  }
+}

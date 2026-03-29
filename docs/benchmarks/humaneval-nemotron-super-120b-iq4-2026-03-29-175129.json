@@ -1,0 +1,43 @@
+{
+  "timestamp_utc": "2026-03-29T15:51:44.485234+00:00",
+  "endpoint": "https://c1fb77ul6l2dw2.api.runpod.ai",
+  "endpoint_id": "c1fb77ul6l2dw2",
+  "endpoint_source": "NEMOTRON_BENCH_ENDPOINT",
+  "model": "nemotron-super-120b-iq4",
+  "model_source": "NEMOTRON_BENCH_MODEL",
+  "label": "probe-p1-131072",
+  "runtime_config": {
+    "n_gpu_layers": 99,
+    "parallel": 1,
+    "ctx_size": 131072,
+    "flash_attn": "on"
+  },
+  "n_problems": 1,
+  "passed": 1,
+  "pass_at_1_pct": 100.0,
+  "avg_tok_s": 26.21,
+  "avg_latency_s": 14.077,
+  "workers": 1,
+  "max_tokens": 512,
+  "timeout_s": 10.0,
+  "failure_summary": {
+    "by_type": {},
+    "top_reasons": []
+  },
+  "failed_tasks": [],
+  "results": {
+    "HumanEval/0": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    n = len(numbers)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if abs(numbers[i] - numbers[j]) < threshold:\n                return True\n    return False",
+      "tok_s": 26.21262555446268,
+      "latency_s": 14.077185790996737,
+      "prompt_tokens": 170,
+      "completion_tokens": 369,
+      "total_tokens": 539,
+      "finish_reason": "stop"
+    }
+  }
+}

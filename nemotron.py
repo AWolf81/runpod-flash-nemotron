@@ -144,24 +144,36 @@ def _patch_flash_resource_provisioning_template() -> None:
 
 _patch_flash_resource_provisioning_template()
 
-# VOLUME_NAME = "nemotron-model-cache"         # Q4_K_XL volume
-VOLUME_NAME = "nemotron-iq4xs-cache"            # IQ4_XS volume (separate)
-# MODEL_DIR = "/runpod-volume/models/UD-Q4_K_XL"
-# MODEL_FILENAME = "NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
-MODEL_DIR = "/runpod-volume/models/UD-IQ4_XS"
-MODEL_FILENAME = "NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
-MODEL_PATH = f"{MODEL_DIR}/{MODEL_FILENAME}"
+def _env_str(name: str, default: str) -> str:
+    value = os.environ.get(name, default).strip()
+    return value or default
 
-# GPU_INFERENCE_ENDPOINT_NAME = "nemotron-super-120b"   # Q4_K_XL endpoint
-GPU_INFERENCE_ENDPOINT_NAME = "nemotron-iq4xs"          # IQ4_XS endpoint (separate)
+
+def _env_csv(name: str, default: str) -> list[str]:
+    raw = _env_str(name, default)
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+# Defaults target IQ4_XS to match the currently deployed benchmark model.
+VOLUME_NAME = _env_str("NEMOTRON_VOLUME_NAME", "nemotron-iq4xs-cache")
+MODEL_DIR = _env_str("NEMOTRON_MODEL_DIR", "/runpod-volume/models/UD-IQ4_XS")
+MODEL_FILENAME = _env_str(
+    "NEMOTRON_MODEL_FILENAME",
+    "NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf",
+)
+MODEL_PATH = f"{MODEL_DIR}/{MODEL_FILENAME}"
+GPU_INFERENCE_ENDPOINT_NAME = _env_str("NEMOTRON_ENDPOINT_NAME", "nemotron-iq4xs")
+OPENAI_MODEL_ID = _env_str("NEMOTRON_OPENAI_MODEL_ID", "nemotron-super-120b-iq4")
+MODEL_REPO_ID = _env_str("NEMOTRON_HF_REPO_ID", "unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF")
+MODEL_ALLOW_PATTERNS = _env_csv("NEMOTRON_HF_ALLOW_PATTERNS", "*UD-IQ4_XS*")
 
 # ── Cached Model Configuration ────────────────────────────────────────────────
 # RunPod cached models mounts the HF repo at:
 #   /runpod-volume/huggingface-cache/hub/models--org--repo/snapshots/{hash}/
 # Set CACHED_REPO_ID to your private single-quant repo (org/repo-name).
 # Leave as empty string to fall back to the network volume path (MODEL_PATH).
-CACHED_REPO_ID = ""  # e.g. "your-org/nemotron-q4-xl"
-CACHED_CACHE_BASE = "/runpod-volume/huggingface-cache/hub"
+CACHED_REPO_ID = _env_str("NEMOTRON_CACHED_REPO_ID", "")  # e.g. "your-org/nemotron-q4-xl"
+CACHED_CACHE_BASE = _env_str("NEMOTRON_CACHED_CACHE_BASE", "/runpod-volume/huggingface-cache/hub")
 
 
 def get_cached_model_path() -> str | None:
@@ -198,6 +210,28 @@ def make_volume() -> NetworkVolume:
     return NetworkVolume(name=VOLUME_NAME, size=100)
 
 
+def _env_int(name: str, default: int, minimum: int | None = None, maximum: int | None = None) -> int:
+    raw = os.environ.get(name, str(default)).strip()
+    try:
+        value = int(raw)
+    except Exception:
+        value = default
+    if minimum is not None:
+        value = max(minimum, value)
+    if maximum is not None:
+        value = min(maximum, value)
+    return value
+
+
+def _llama_runtime_config() -> dict[str, int | str]:
+    return {
+        "n_gpu_layers": _env_int("LLAMA_N_GPU_LAYERS", 99, minimum=1),
+        "parallel": _env_int("LLAMA_PARALLEL", 1, minimum=1, maximum=8),
+        "ctx_size": _env_int("LLAMA_CTX_SIZE", 32768, minimum=4096, maximum=131072),
+        "flash_attn": os.environ.get("LLAMA_FLASH_ATTN", "on"),
+    }
+
+
 gpu_api = Endpoint(
     name=GPU_INFERENCE_ENDPOINT_NAME,
     # Requires >90GB VRAM: model weights are 78 GiB and compute buffers push
@@ -211,7 +245,14 @@ gpu_api = Endpoint(
         GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_WORKSTATION_EDITION,
         GpuType.NVIDIA_RTX_PRO_6000_BLACKWELL_MAX_Q_WORKSTATION_EDITION,
     ],
-    env={"PORT": "80", "PORT_HEALTH": "80"},
+    env={
+        "PORT": "80",
+        "PORT_HEALTH": "80",
+        "LLAMA_PARALLEL": _env_str("LLAMA_PARALLEL", "1"),
+        "LLAMA_CTX_SIZE": _env_str("LLAMA_CTX_SIZE", "32768"),
+        "LLAMA_N_GPU_LAYERS": _env_str("LLAMA_N_GPU_LAYERS", "99"),
+        "LLAMA_FLASH_ATTN": _env_str("LLAMA_FLASH_ATTN", "on"),
+    },
     dependencies=["httpx"],
     volume=make_volume(),
     template=PodTemplate(
@@ -238,7 +279,7 @@ def _start_llama_server_once() -> str:
     import httpx
 
     llama_bin = "/app/llama-server"
-    model_path = "/runpod-volume/models/UD-IQ4_XS/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
+    model_path = MODEL_PATH
     server_url = "http://127.0.0.1:8081/health"
 
     with _llama_start_lock:
@@ -254,15 +295,17 @@ def _start_llama_server_once() -> str:
         if subprocess.run(["pgrep", "-x", "llama-server"], capture_output=True).returncode == 0:
             return "already_running"
 
+        cfg = _llama_runtime_config()
+
         subprocess.Popen([
             llama_bin,
             "--model", model_path,
             "--host", "127.0.0.1",
             "--port", "8081",
-            "--n-gpu-layers", "99",
-            "--parallel", "1",
-            "--ctx-size", "32768",
-            "--flash-attn", "on",
+            "--n-gpu-layers", str(cfg["n_gpu_layers"]),
+            "--parallel", str(cfg["parallel"]),
+            "--ctx-size", str(cfg["ctx_size"]),
+            "--flash-attn", str(cfg["flash_attn"]),
         ])
         return "started"
 
@@ -279,7 +322,7 @@ async def _prime_slot():
             await client.post(
                 "http://127.0.0.1:8081/v1/chat/completions",
                 json={
-                    "model": "nemotron",
+                    "model": OPENAI_MODEL_ID,
                     "messages": [{"role": "user", "content": "hi"}],
                     "max_tokens": 1,
                     "temperature": 0,
@@ -294,7 +337,7 @@ async def _prime_slot():
 @gpu_api.post("/v1/chat/completions")
 async def chat_completions(
     messages: list,
-    model: str = "nemotron",
+    model: str = OPENAI_MODEL_ID,
     temperature: float = 1.0,
     top_p: float = 0.95,
     max_tokens: int = None,
@@ -311,8 +354,7 @@ async def chat_completions(
     from starlette.responses import StreamingResponse
 
     llama_bin = "/app/llama-server"
-    # model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
-    model_path = "/runpod-volume/models/UD-IQ4_XS/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
+    model_path = MODEL_PATH
     server_url = "http://127.0.0.1:8081"
 
     # Check if server is already running
@@ -414,7 +456,7 @@ async def chat_completions(
 async def list_models() -> dict:
     return {
         "object": "list",
-        "data": [{"id": "nemotron", "object": "model", "owned_by": "runpod-flash-nemotron"}],
+        "data": [{"id": OPENAI_MODEL_ID, "object": "model", "owned_by": "runpod-flash-nemotron"}],
     }
 
 
@@ -425,10 +467,13 @@ async def admin_debug() -> dict:
         "patch_exists": os.path.exists("/app/patches/install_llama_server.sh"),
         "binary_exists": os.path.exists("/app/llama-server"),
         "volume_cache_exists": os.path.exists("/runpod-volume/cache/llama-server"),
-        # "local_model_exists": os.path.exists("/local-model/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"),
-        "local_model_exists": os.path.exists("/local-model/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"),
+        "local_model_exists": os.path.exists(f"/local-model/{MODEL_FILENAME}"),
         "runpod_pod_id": os.environ.get("RUNPOD_POD_ID"),
         "env_keys": [k for k in os.environ if "RUNPOD" in k],
+        "llama_runtime_config": _llama_runtime_config(),
+        "model_path": MODEL_PATH,
+        "model_filename": MODEL_FILENAME,
+        "openai_model_id": OPENAI_MODEL_ID,
     }
 
 
@@ -469,8 +514,7 @@ async def warmup() -> dict:
     import subprocess
 
     llama_bin = "/app/llama-server"
-    # model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
-    model_path = "/runpod-volume/models/UD-IQ4_XS/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
+    model_path = MODEL_PATH
 
     if not os.path.exists(llama_bin):
         return {
@@ -497,8 +541,7 @@ async def gpu_health() -> dict:
     import os
     import httpx
 
-    # model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
-    model_path = "/runpod-volume/models/UD-IQ4_XS/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
+    model_path = MODEL_PATH
     llama_bin = "/app/llama-server"
     if not os.path.exists(model_path):
         return {"status": "missing_model", "model_path": model_path}
@@ -548,12 +591,10 @@ def make_seed_runner(hf_token: str):
         import shutil
         from huggingface_hub import snapshot_download
 
-        model_dir = "/runpod-volume/models"
-        # model_path = "/runpod-volume/models/UD-Q4_K_XL/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
-        model_path = "/runpod-volume/models/UD-IQ4_XS/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
-        model_repo_id = "unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF"
-        # allow_patterns = ["*UD-Q4_K_XL*"]
-        allow_patterns = ["*UD-IQ4_XS*"]
+        model_dir = MODEL_DIR
+        model_path = MODEL_PATH
+        model_repo_id = MODEL_REPO_ID
+        allow_patterns = MODEL_ALLOW_PATTERNS
         volume_cache = "/runpod-volume/cache/llama-server"
         _clean_binary = (payload or {}).get("clean_binary", False)
         _clean_model = (payload or {}).get("clean_model", False)

@@ -1,0 +1,353 @@
+{
+  "timestamp_utc": "2026-03-29T15:16:05.156429+00:00",
+  "endpoint": "https://c1fb77ul6l2dw2.api.runpod.ai",
+  "endpoint_id": "c1fb77ul6l2dw2",
+  "endpoint_source": "NEMOTRON_BENCH_ENDPOINT",
+  "model": "nemotron-super-120b-iq4",
+  "model_source": "NEMOTRON_BENCH_MODEL",
+  "label": "p2-ctx24576",
+  "runtime_config": {
+    "n_gpu_layers": 99,
+    "parallel": 2,
+    "ctx_size": 32768,
+    "flash_attn": "on"
+  },
+  "n_problems": 20,
+  "passed": 14,
+  "pass_at_1_pct": 70.0,
+  "avg_tok_s": 43.91,
+  "avg_latency_s": 12.923,
+  "workers": 1,
+  "max_tokens": 512,
+  "timeout_s": 10.0,
+  "failure_summary": {
+    "by_type": {
+      "checker_assertion": 4,
+      "request_error": 2
+    },
+    "top_reasons": [
+      {
+        "reason": "failed:",
+        "count": 3
+      },
+      {
+        "reason": "failed: unterminated triple-quoted string literal (detected at line 46) (<string>, line 28)",
+        "count": 1
+      },
+      {
+        "reason": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+        "count": 1
+      },
+      {
+        "reason": "InternalServerError: <!DOCTYPE html> <!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]--> <!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![end...",
+        "count": 1
+      }
+    ]
+  },
+  "failed_tasks": [
+    {
+      "task_id": "HumanEval/1",
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/3",
+      "failure_type": "checker_assertion",
+      "error": "failed: unterminated triple-quoted string literal (detected at line 46) (<string>, line 28)",
+      "checker_result": "failed: unterminated triple-quoted string literal (detected at line 46) (<string>, line 28)",
+      "completion_preview": "from typing import List\n\ndef below_zero(operations: List[int]) -> bool:\n    \"\"\" You're given a list of deposit and withdrawal operations on a bank account that starts with\n    zero balance. Your task is to detect if at any point the balance of account fall"
+    },
+    {
+      "task_id": "HumanEval/8",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/9",
+      "failure_type": "request_error",
+      "error": "InternalServerError: <!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![endif]-->\n<head>\n\n<title>runpod.ai | 502: Bad gateway</title>\n<meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />\n<link rel=\"stylesheet\" id=\"cf_styles-css\" href=\"/cdn-cgi/styles/main.css\" />\n</head>\n<body>\n<div id=\"cf-wrapper\">\n    <div id=\"cf-error-details\" class=\"p-0\">\n        <header class=\"mx-auto pt-10 lg:pt-6 lg:px-8 w-240 lg:w-full mb-8\">\n            <h1 class=\"inline-block sm:block sm:mb-2 font-light text-60 lg:text-4xl text-black-dark leading-tight mr-2\">\n                <span class=\"inline-block\">Bad gateway</span>\n                <span class=\"code-label\">Error code 502</span>\n            </h1>\n            <div>\n                Visit <a href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=c1fb77ul6l2dw2.api.runpod.ai\" target=\"_blank\" rel=\"noopener noreferrer\">cloudflare.com</a> for more information.\n            </div>\n            <div class=\"mt-3\">2026-03-29 15:14:47 UTC</div>\n        </header>\n        <div class=\"my-8 bg-gradient-gray\">\n            <div class=\"w-240 lg:w-full mx-auto\">\n                <div class=\"clearfix md:px-8\">\n                    <div id=\"cf-browser-status\" class=\" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center\">\n  <div class=\"relative mb-10 md:m-0\">\n    \n    <span class=\"cf-icon-browser block md:hidden h-20 bg-center bg-no-repeat\"></span>\n    <span class=\"cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4\"></span>\n    \n  </div>\n  <span class=\"md:block w-full truncate\">You</span>\n  <h3 class=\"md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3\">\n  \n    Browser\n  \n  </h3>\n  \n  <span class=\"leading-1.3 text-2xl text-green-success\">Working</span>\n  \n</div>\n                    <div id=\"cf-cloudflare-status\" class=\" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center\">\n  <div class=\"relative mb-10 md:m-0\">\n    <a href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=c1fb77ul6l2dw2.api.runpod.ai\" target=\"_blank\" rel=\"noopener noreferrer\">\n    <span class=\"cf-icon-cloud block md:hidden h-20 bg-center bg-no-repeat\"></span>\n    <span class=\"cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4\"></span>\n    </a>\n  </div>\n  <span class=\"md:block w-full truncate\">Frankfurt</span>\n  <h3 class=\"md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3\">\n  <a href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=c1fb77ul6l2dw2.api.runpod.ai\" target=\"_blank\" rel=\"noopener noreferrer\">\n    Cloudflare\n  </a>\n  </h3>\n  \n  <span class=\"leading-1.3 text-2xl text-green-success\">Working</span>\n  \n</div>\n                    <div id=\"cf-host-status\" class=\"cf-error-source relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center\">\n  <div class=\"relative mb-10 md:m-0\">\n    \n    <span class=\"cf-icon-server block md:hidden h-20 bg-center bg-no-repeat\"></span>\n    <span class=\"cf-icon-error w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4\"></span>\n    \n  </div>\n  <span class=\"md:block w-full truncate\">c1fb77ul6l2dw2.api.runpod.ai</span>\n  <h3 class=\"md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3\">\n  \n    Host\n  \n  </h3>\n  \n  <span class=\"leading-1.3 text-2xl text-red-error\">Error</span>\n  \n</div>\n                </div>\n            </div>\n        </div>\n\n        <div class=\"w-240 lg:w-full mx-auto mb-8 lg:px-8\">\n            <div class=\"clearfix\">\n                <div class=\"w-1/2 md:w-full float-left pr-6 md:pb-10 md:pr-0 leading-relaxed\">\n                    <h2 class=\"text-3xl font-normal leading-1.3 mb-4\">What happened?</h2>\n                    <p>The web server reported a bad gateway error.</p>\n                </div>\n                <div class=\"w-1/2 md:w-full float-left leading-relaxed\">\n                    <h2 class=\"text-3xl font-normal leading-1.3 mb-4\">What can I do?</h2>\n                    <p class=\"mb-6\">Please try again in a few minutes.</p>\n                </div>\n            </div>\n        </div>\n\n        <div class=\"cf-error-footer cf-wrapper w-240 lg:w-full py-10 sm:py-4 sm:px-8 mx-auto text-center sm:text-left border-solid border-0 border-t border-gray-300\">\n    <p class=\"text-13\">\n      <span class=\"cf-footer-item sm:block sm:mb-1\">Cloudflare Ray ID: <strong class=\"font-semibold\">9e3fd2cb087f038e</strong></span>\n      <span class=\"cf-footer-separator sm:hidden\">&bull;</span>\n      <span id=\"cf-footer-item-ip\" class=\"cf-footer-item hidden sm:block sm:mb-1\">\n        Your IP:\n        <button type=\"button\" id=\"cf-footer-ip-reveal\" class=\"cf-footer-ip-reveal-btn\">Click to reveal</button>\n        <span class=\"hidden\" id=\"cf-footer-ip\">2a02:8071:6710:7f80:db17:1ab2:5643:8ce1</span>\n        <span class=\"cf-footer-separator sm:hidden\">&bull;</span>\n      </span>\n      <span class=\"cf-footer-item sm:block sm:mb-1\"><span>Performance &amp; security by</span> <a rel=\"noopener noreferrer\" href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=c1fb77ul6l2dw2.api.runpod.ai\" id=\"brand_link\" target=\"_blank\">Cloudflare</a></span>\n      \n    </p>\n    <script>(function(){function d(){var b=a.getElementById(\"cf-footer-item-ip\"),c=a.getElementById(\"cf-footer-ip-reveal\");b&&\"classList\"in b&&(b.classList.remove(\"hidden\"),c.addEventListener(\"click\",function(){c.classList.add(\"hidden\");a.getElementById(\"cf-footer-ip\").classList.remove(\"hidden\")}))}var a=document;document.addEventListener&&a.addEventListener(\"DOMContentLoaded\",d)})();</script>\n  </div><!-- /.error-footer -->\n\n    </div>\n</div>\n</body>\n</html>",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/10",
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/19",
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": ""
+    }
+  ],
+  "results": {
+    "HumanEval/0": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    n = len(numbers)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if abs(numbers[i] - numbers[j]) < threshold:\n                return True\n    return False",
+      "tok_s": 18.704664738020067,
+      "latency_s": 19.7276992219995,
+      "prompt_tokens": 170,
+      "completion_tokens": 369,
+      "total_tokens": 539,
+      "finish_reason": "stop"
+    },
+    "HumanEval/1": {
+      "passed": false,
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": "",
+      "tok_s": 19.15773200587474,
+      "latency_s": 26.72550173700074,
+      "prompt_tokens": 168,
+      "completion_tokens": 512,
+      "total_tokens": 680,
+      "finish_reason": "length"
+    },
+    "HumanEval/2": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def truncate_number(number: float) -> float:\n    import math\n    return number - math.floor(number)",
+      "tok_s": 18.11675187232646,
+      "latency_s": 16.835247408002033,
+      "prompt_tokens": 132,
+      "completion_tokens": 305,
+      "total_tokens": 437,
+      "finish_reason": "stop"
+    },
+    "HumanEval/3": {
+      "passed": false,
+      "failure_type": "checker_assertion",
+      "error": "failed: unterminated triple-quoted string literal (detected at line 46) (<string>, line 28)",
+      "checker_result": "failed: unterminated triple-quoted string literal (detected at line 46) (<string>, line 28)",
+      "completion_preview": "from typing import List\n\ndef below_zero(operations: List[int]) -> bool:\n    \"\"\" You're given a list of deposit and withdrawal operations on a bank account that starts with\n    zero balance. Your task is to detect if at any point the balance of account fall",
+      "tok_s": 18.728377313606007,
+      "latency_s": 27.338193342999148,
+      "prompt_tokens": 163,
+      "completion_tokens": 512,
+      "total_tokens": 675,
+      "finish_reason": "length"
+    },
+    "HumanEval/4": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\ndef mean_absolute_deviation(numbers: List[float]) -> float:\n    if not numbers:\n        return 0.0\n    mean = sum(numbers) / len(numbers)\n    total = sum(abs(x - mean) for x in numbers)\n    return total / len(numbers)",
+      "tok_s": 17.505348075467406,
+      "latency_s": 13.424468852997961,
+      "prompt_tokens": 166,
+      "completion_tokens": 235,
+      "total_tokens": 401,
+      "finish_reason": "stop"
+    },
+    "HumanEval/5": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\ndef intersperse(numbers: List[int], delimeter: int) -> List[int]:\n    if not numbers:\n        return []\n    result = []\n    for i, num in enumerate(numbers):\n        result.append(num)\n        if i < len(numbers) - 1:\n            result.append(delimeter)\n    return result",
+      "tok_s": 17.675238107284788,
+      "latency_s": 16.463710317999357,
+      "prompt_tokens": 144,
+      "completion_tokens": 291,
+      "total_tokens": 435,
+      "finish_reason": "stop"
+    },
+    "HumanEval/6": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\ndef parse_nested_parens(paren_string: str) -> List[int]:\n    result = []\n    for group in paren_string.split():\n        cur_depth = 0\n        max_depth = 0\n        for ch in group:\n            if ch == '(':\n                cur_depth += 1\n                if cur_depth > max_depth:\n                    max_depth = cur_depth\n            e...",
+      "tok_s": 17.909003421513532,
+      "latency_s": 21.609242619000725,
+      "prompt_tokens": 161,
+      "completion_tokens": 387,
+      "total_tokens": 548,
+      "finish_reason": "stop"
+    },
+    "HumanEval/7": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\n\ndef filter_by_substring(strings: List[str], substring: str) -> List[str]:\n    \"\"\" Filter an input list of strings only for ones that contain given substring\n    >>> filter_by_substring([], 'a')\n    []\n    >>> filter_by_substring(['abc', 'bacd', 'cde', 'array'], 'a')\n    ['abc', 'bacd', 'array']\n    \"\"\"\n    return [s for s in strings...",
+      "tok_s": 17.140697912022002,
+      "latency_s": 13.184994051000103,
+      "prompt_tokens": 141,
+      "completion_tokens": 226,
+      "total_tokens": 367,
+      "finish_reason": "stop"
+    },
+    "HumanEval/8": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/9": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "InternalServerError: <!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![endif]-->\n<head>\n\n<title>runpod.ai | 502: Bad gateway</title>\n<meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />\n<link rel=\"stylesheet\" id=\"cf_styles-css\" href=\"/cdn-cgi/styles/main.css\" />\n</head>\n<body>\n<div id=\"cf-wrapper\">\n    <div id=\"cf-error-details\" class=\"p-0\">\n        <header class=\"mx-auto pt-10 lg:pt-6 lg:px-8 w-240 lg:w-full mb-8\">\n            <h1 class=\"inline-block sm:block sm:mb-2 font-light text-60 lg:text-4xl text-black-dark leading-tight mr-2\">\n                <span class=\"inline-block\">Bad gateway</span>\n                <span class=\"code-label\">Error code 502</span>\n            </h1>\n            <div>\n                Visit <a href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=c1fb77ul6l2dw2.api.runpod.ai\" target=\"_blank\" rel=\"noopener noreferrer\">cloudflare.com</a> for more information.\n            </div>\n            <div class=\"mt-3\">2026-03-29 15:14:47 UTC</div>\n        </header>\n        <div class=\"my-8 bg-gradient-gray\">\n            <div class=\"w-240 lg:w-full mx-auto\">\n                <div class=\"clearfix md:px-8\">\n                    <div id=\"cf-browser-status\" class=\" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center\">\n  <div class=\"relative mb-10 md:m-0\">\n    \n    <span class=\"cf-icon-browser block md:hidden h-20 bg-center bg-no-repeat\"></span>\n    <span class=\"cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4\"></span>\n    \n  </div>\n  <span class=\"md:block w-full truncate\">You</span>\n  <h3 class=\"md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3\">\n  \n    Browser\n  \n  </h3>\n  \n  <span class=\"leading-1.3 text-2xl text-green-success\">Working</span>\n  \n</div>\n                    <div id=\"cf-cloudflare-status\" class=\" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center\">\n  <div class=\"relative mb-10 md:m-0\">\n    <a href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=c1fb77ul6l2dw2.api.runpod.ai\" target=\"_blank\" rel=\"noopener noreferrer\">\n    <span class=\"cf-icon-cloud block md:hidden h-20 bg-center bg-no-repeat\"></span>\n    <span class=\"cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4\"></span>\n    </a>\n  </div>\n  <span class=\"md:block w-full truncate\">Frankfurt</span>\n  <h3 class=\"md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3\">\n  <a href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=c1fb77ul6l2dw2.api.runpod.ai\" target=\"_blank\" rel=\"noopener noreferrer\">\n    Cloudflare\n  </a>\n  </h3>\n  \n  <span class=\"leading-1.3 text-2xl text-green-success\">Working</span>\n  \n</div>\n                    <div id=\"cf-host-status\" class=\"cf-error-source relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center\">\n  <div class=\"relative mb-10 md:m-0\">\n    \n    <span class=\"cf-icon-server block md:hidden h-20 bg-center bg-no-repeat\"></span>\n    <span class=\"cf-icon-error w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4\"></span>\n    \n  </div>\n  <span class=\"md:block w-full truncate\">c1fb77ul6l2dw2.api.runpod.ai</span>\n  <h3 class=\"md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3\">\n  \n    Host\n  \n  </h3>\n  \n  <span class=\"leading-1.3 text-2xl text-red-error\">Error</span>\n  \n</div>\n                </div>\n            </div>\n        </div>\n\n        <div class=\"w-240 lg:w-full mx-auto mb-8 lg:px-8\">\n            <div class=\"clearfix\">\n                <div class=\"w-1/2 md:w-full float-left pr-6 md:pb-10 md:pr-0 leading-relaxed\">\n                    <h2 class=\"text-3xl font-normal leading-1.3 mb-4\">What happened?</h2>\n                    <p>The web server reported a bad gateway error.</p>\n                </div>\n                <div class=\"w-1/2 md:w-full float-left leading-relaxed\">\n                    <h2 class=\"text-3xl font-normal leading-1.3 mb-4\">What can I do?</h2>\n                    <p class=\"mb-6\">Please try again in a few minutes.</p>\n                </div>\n            </div>\n        </div>\n\n        <div class=\"cf-error-footer cf-wrapper w-240 lg:w-full py-10 sm:py-4 sm:px-8 mx-auto text-center sm:text-left border-solid border-0 border-t border-gray-300\">\n    <p class=\"text-13\">\n      <span class=\"cf-footer-item sm:block sm:mb-1\">Cloudflare Ray ID: <strong class=\"font-semibold\">9e3fd2cb087f038e</strong></span>\n      <span class=\"cf-footer-separator sm:hidden\">&bull;</span>\n      <span id=\"cf-footer-item-ip\" class=\"cf-footer-item hidden sm:block sm:mb-1\">\n        Your IP:\n        <button type=\"button\" id=\"cf-footer-ip-reveal\" class=\"cf-footer-ip-reveal-btn\">Click to reveal</button>\n        <span class=\"hidden\" id=\"cf-footer-ip\">2a02:8071:6710:7f80:db17:1ab2:5643:8ce1</span>\n        <span class=\"cf-footer-separator sm:hidden\">&bull;</span>\n      </span>\n      <span class=\"cf-footer-item sm:block sm:mb-1\"><span>Performance &amp; security by</span> <a rel=\"noopener noreferrer\" href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=c1fb77ul6l2dw2.api.runpod.ai\" id=\"brand_link\" target=\"_blank\">Cloudflare</a></span>\n      \n    </p>\n    <script>(function(){function d(){var b=a.getElementById(\"cf-footer-item-ip\"),c=a.getElementById(\"cf-footer-ip-reveal\");b&&\"classList\"in b&&(b.classList.remove(\"hidden\"),c.addEventListener(\"click\",function(){c.classList.add(\"hidden\");a.getElementById(\"cf-footer-ip\").classList.remove(\"hidden\")}))}var a=document;document.addEventListener&&a.addEventListener(\"DOMContentLoaded\",d)})();</script>\n  </div><!-- /.error-footer -->\n\n    </div>\n</div>\n</body>\n</html>",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/10": {
+      "passed": false,
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": "",
+      "tok_s": 13.626364137355495,
+      "latency_s": 37.57421971400254,
+      "prompt_tokens": 196,
+      "completion_tokens": 512,
+      "total_tokens": 708,
+      "finish_reason": "length"
+    },
+    "HumanEval/11": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\n\ndef string_xor(a: str, b: str) -> str:\n    \"\"\" Input are two strings a and b consisting only of 1s and 0s.\n    Perform binary XOR on these inputs and return result also as a string.\n    >>> string_xor('010', '110')\n    '100'\n    \"\"\"\n    return ''.join('0' if x == y else '1' for x, y in zip(a, b))",
+      "tok_s": 74.85656682589631,
+      "latency_s": 5.677524605001963,
+      "prompt_tokens": 129,
+      "completion_tokens": 425,
+      "total_tokens": 554,
+      "finish_reason": "stop"
+    },
+    "HumanEval/12": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List, Optional\n\n\ndef longest(strings: List[str]) -> Optional[str]:\n    \"\"\" Out of list of strings, return the longest one. Return the first one in case of multiple\n    strings of the same length. Return None in case the input list is empty.\n    >>> longest([])\n\n    >>> longest(['a', 'b', 'c'])\n    'a'\n    >>> longest(['a', 'bb', 'ccc'])\n  ...",
+      "tok_s": 73.03823522472192,
+      "latency_s": 5.312286076001328,
+      "prompt_tokens": 147,
+      "completion_tokens": 388,
+      "total_tokens": 535,
+      "finish_reason": "stop"
+    },
+    "HumanEval/13": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def greatest_common_divisor(a: int, b: int) -> int:\n    a, b = abs(a), abs(b)\n    while b:\n        a, b = b, a % b\n    return a",
+      "tok_s": 61.84174757616895,
+      "latency_s": 2.538738087998354,
+      "prompt_tokens": 120,
+      "completion_tokens": 157,
+      "total_tokens": 277,
+      "finish_reason": "stop"
+    },
+    "HumanEval/14": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\n\ndef all_prefixes(string: str) -> List[str]:\n    \"\"\" Return list of all prefixes from shortest to longest of the input string\n    >>> all_prefixes('abc')\n    ['a', 'ab', 'abc']\n    \"\"\"\n    return [string[:i] for i in range(1, len(string) + 1)]",
+      "tok_s": 67.10137777212513,
+      "latency_s": 3.204107085999567,
+      "prompt_tokens": 103,
+      "completion_tokens": 215,
+      "total_tokens": 318,
+      "finish_reason": "stop"
+    },
+    "HumanEval/15": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def string_sequence(n: int) -> str:\n    return ' '.join(str(i) for i in range(n + 1))",
+      "tok_s": 67.3087886760628,
+      "latency_s": 3.2685181880005985,
+      "prompt_tokens": 115,
+      "completion_tokens": 220,
+      "total_tokens": 335,
+      "finish_reason": "stop"
+    },
+    "HumanEval/16": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def count_distinct_characters(string: str) -> int:\n    \"\"\" Given a string, find out how many distinct characters (regardless of case) does it consist of\n    >>> count_distinct_characters('xyzXYZ')\n    3\n    >>> count_distinct_characters('Jerry')\n    4\n    \"\"\"\n    return len(set(string.lower()))",
+      "tok_s": 68.91184347565614,
+      "latency_s": 3.613312130997656,
+      "prompt_tokens": 119,
+      "completion_tokens": 249,
+      "total_tokens": 368,
+      "finish_reason": "stop"
+    },
+    "HumanEval/17": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\ndef parse_music(music_string: str) -> List[int]:\n    \"\"\"Parse a string of musical notes and return a list of beat durations.\"\"\"\n    beat_map = {\n        'o': 4,\n        'o|': 2,\n        '.|': 1,\n    }\n    return [beat_map[token] for token in music_string.split()]",
+      "tok_s": 72.03101477141122,
+      "latency_s": 4.8173693110002205,
+      "prompt_tokens": 218,
+      "completion_tokens": 347,
+      "total_tokens": 565,
+      "finish_reason": "stop"
+    },
+    "HumanEval/18": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def how_many_times(string: str, substring: str) -> int:\n    if not substring:\n        return 0\n    sub_len = len(substring)\n    count = 0\n    for i in range(len(string) - sub_len + 1):\n        if string[i:i+sub_len] == substring:\n            count += 1\n    return count",
+      "tok_s": 72.30691391955894,
+      "latency_s": 4.425579556002049,
+      "prompt_tokens": 134,
+      "completion_tokens": 320,
+      "total_tokens": 454,
+      "finish_reason": "stop"
+    },
+    "HumanEval/19": {
+      "passed": false,
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": "",
+      "tok_s": 74.42464421106958,
+      "latency_s": 6.879441687997314,
+      "prompt_tokens": 155,
+      "completion_tokens": 512,
+      "total_tokens": 667,
+      "finish_reason": "length"
+    }
+  }
+}

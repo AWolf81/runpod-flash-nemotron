@@ -1,0 +1,438 @@
+{
+  "timestamp_utc": "2026-03-29T16:31:50.692732+00:00",
+  "endpoint": "https://c1fb77ul6l2dw2.api.runpod.ai",
+  "endpoint_id": "c1fb77ul6l2dw2",
+  "endpoint_source": "NEMOTRON_BENCH_ENDPOINT",
+  "model": "nemotron-super-120b-iq4",
+  "model_source": "NEMOTRON_BENCH_MODEL",
+  "label": "p2-ctx100k-safe-w4-trigger4",
+  "runtime_config": {
+    "n_gpu_layers": 99,
+    "parallel": 2,
+    "ctx_size": 100000,
+    "flash_attn": "on"
+  },
+  "n_problems": 20,
+  "passed": 0,
+  "pass_at_1_pct": 0.0,
+  "avg_tok_s": 0.0,
+  "avg_latency_s": 0.0,
+  "workers": 4,
+  "max_tokens": 512,
+  "timeout_s": 10.0,
+  "failure_summary": {
+    "by_type": {
+      "request_error": 20
+    },
+    "top_reasons": [
+      {
+        "reason": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+        "count": 20
+      }
+    ]
+  },
+  "failed_tasks": [
+    {
+      "task_id": "HumanEval/0",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/1",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/2",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/3",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/4",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/5",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/6",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/7",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/8",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/9",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/10",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/11",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/12",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/13",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/14",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/15",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/16",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/17",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/18",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/19",
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": ""
+    }
+  ],
+  "results": {
+    "HumanEval/0": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/1": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/2": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/3": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/4": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/5": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/6": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/7": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/8": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/9": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/10": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/11": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/12": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/13": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/14": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/15": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/16": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/17": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/18": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    },
+    "HumanEval/19": {
+      "passed": false,
+      "failure_type": "request_error",
+      "error": "APIStatusError: Error code: 430 - {'error': 'no workers available'}",
+      "checker_result": "",
+      "completion_preview": "",
+      "tok_s": 0.0,
+      "latency_s": 0.0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "finish_reason": null
+    }
+  }
+}

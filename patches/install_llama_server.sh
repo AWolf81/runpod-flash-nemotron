@@ -15,8 +15,10 @@ BUILD_DIR="/tmp/llama-cpp-build"
 INSTALL_DIR="/app"
 BINARY="${INSTALL_DIR}/llama-server"
 VOLUME_CACHE="/runpod-volume/cache/llama-server"
-MODEL_DIR="/runpod-volume/models/UD-Q4_K_XL"
-MODEL_PATH="${MODEL_DIR}/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+# MODEL_DIR="/runpod-volume/models/UD-Q4_K_XL"
+# MODEL_PATH="${MODEL_DIR}/NVIDIA-Nemotron-3-Super-120B-A12B-UD-Q4_K_XL-00001-of-00003.gguf"
+MODEL_DIR="/runpod-volume/models/UD-IQ4_XS"
+MODEL_PATH="${MODEL_DIR}/NVIDIA-Nemotron-3-Super-120B-A12B-UD-IQ4_XS-00001-of-00003.gguf"
 
 preload_model() {
     # Read all GGUF shards into Linux page cache in parallel before starting llama-server.
@@ -104,7 +106,7 @@ if [[ -x "${VOLUME_CACHE}" ]] && "${VOLUME_CACHE}" --version &>/dev/null; then
 fi
 
 echo "==> Installing cmake>=3.28 (system cmake 3.22 is too old)"
-pip install "cmake>=3.28"
+python3 -m pip install "cmake>=3.28"
 
 echo "==> Cloning llama.cpp (latest main)"
 rm -rf "${BUILD_DIR}"

@@ -19,6 +19,7 @@ DEFAULT_ENDPOINT_ID="c1fb77ul6l2dw2"
 POLL_INTERVAL="${WARMUP_POLL_INTERVAL:-10}"
 READY_STABLE_POLLS="${WARMUP_READY_STABLE_POLLS:-3}"
 MAX_WORKERS="${WARMUP_MAX_WORKERS:-2}"
+STANDBY_WORKERS="${WARMUP_STANDBY_WORKERS:-0}"
 WARMUP_LOG_FILE="${WARMUP_LOG_FILE:-}"
 LOG_EVERY_POLLS="${WARMUP_LOG_EVERY_POLLS:-3}"
 VERBOSE_COUNTS="${WARMUP_VERBOSE_COUNTS:-0}"
@@ -88,14 +89,32 @@ except Exception:
 scale() {
     local min=$1 max=$2
     local result
+    local payload_with_standby payload_basic
+    payload_with_standby="{\"workersMin\": ${min}, \"workersMax\": ${max}, \"workersStandby\": ${STANDBY_WORKERS}}"
+    payload_basic="{\"workersMin\": ${min}, \"workersMax\": ${max}}"
+
     result="$(curl -sS --connect-timeout 5 --max-time 20 -X PATCH "${RUNPOD_REST_API}/endpoints/${ENDPOINT_ID}" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${RUNPOD_API_KEY}" \
-        -d "{\"workersMin\": ${min}, \"workersMax\": ${max}}")"
-    local actual_min actual_max
+        -d "${payload_with_standby}")"
+    local actual_min actual_max actual_standby
     actual_min="$(echo "${result}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("workersMin","?"))' 2>/dev/null || echo "?")"
     actual_max="$(echo "${result}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("workersMax","?"))' 2>/dev/null || echo "?")"
-    log "    workers: min=${actual_min} max=${actual_max}"
+    actual_standby="$(echo "${result}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("workersStandby","?"))' 2>/dev/null || echo "?")"
+
+    # Some RunPod accounts/endpoints reject workersStandby in this PATCH API.
+    # Fallback to the legacy workersMin/workersMax-only payload when needed.
+    if [[ "${actual_min}" == "?" || "${actual_max}" == "?" ]]; then
+        result="$(curl -sS --connect-timeout 5 --max-time 20 -X PATCH "${RUNPOD_REST_API}/endpoints/${ENDPOINT_ID}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${RUNPOD_API_KEY}" \
+            -d "${payload_basic}")"
+        actual_min="$(echo "${result}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("workersMin","?"))' 2>/dev/null || echo "?")"
+        actual_max="$(echo "${result}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("workersMax","?"))' 2>/dev/null || echo "?")"
+        actual_standby="$(echo "${result}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("workersStandby","n/a"))' 2>/dev/null || echo "n/a")"
+    fi
+
+    log "    workers: min=${actual_min} max=${actual_max} standby=${actual_standby}"
 }
 
 _scaled_down=false
@@ -104,7 +123,7 @@ scale_down() {
     _scaled_down=true
     log ""
     log "==> Scaling down to 0 workers..."
-    scale 0 "${MAX_WORKERS}" || true
+    scale 0 0 || true
     log "==> Scaled down."
 }
 trap scale_down INT TERM EXIT
@@ -116,7 +135,8 @@ fi
 log "==> Target endpoint: ${ENDPOINT}"
 if [[ "${WARMUP_RECYCLE_ON_START:-1}" == "1" ]]; then
     log "==> Recycling workers (0 -> 1)..."
-    scale 0 "${MAX_WORKERS}"
+    # Hard drain first (max=0) so old standby workers cannot survive rollout.
+    scale 0 0
     sleep 2
 fi
 log "==> Scaling up to 1 worker..."

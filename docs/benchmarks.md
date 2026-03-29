@@ -1,5 +1,63 @@
 # Nemotron Endpoint Benchmarks
 
+Reference for cold start timing, volume throughput, --mlock evaluation, warmup cost analysis, and HumanEval coding benchmarks.
+
+---
+
+## HumanEval pass@1 (Coding Benchmark)
+
+Evaluated on the full [OpenAI HumanEval](https://github.com/openai/human-eval) benchmark (164 Python coding problems) using `scripts/humaneval.py`.
+
+### Setup
+
+- Model: `nemotron-super-120b-iq4` (IQ4_XS GGUF, RTX Pro 6000 Blackwell 96 GB)
+- Endpoint: RunPod Flash, `p2/ctx100k` (parallel=2, ctx_size=100000, flash_attn=on)
+- Evaluation: single sample per problem, temperature=0.0 (greedy), max_tokens=512
+- Script: `check_correctness` from the `human-eval` package; prompt prepended internally by the library
+
+### Result (2026-03-29, full 164 problems)
+
+| Metric | Value |
+|---|---|
+| **pass@1** | **57.9% (95/164)** |
+| avg generation speed | 78.9 tok/s |
+| avg latency | 4.93 s/problem |
+| workers | 1 |
+| runtime | p2/ctx100000 |
+
+Full results JSON: [humaneval-nemotron-super-120b-iq4-2026-03-29-200017.json](benchmarks/humaneval-nemotron-super-120b-iq4-2026-03-29-200017.json)
+
+### Context on the Score
+
+**57.9% on 164 problems** is the correct full-set baseline. Earlier runs reporting 80% used only the first 20 problems (`n=20`), which are the easiest in the dataset and are not representative.
+
+The 69 failures break down as:
+- **Truncated completions** (~15–20 failures): model re-echoes the docstring before writing the implementation and hits the 512-token limit mid-string, producing a syntax error. Raising `--max-tokens` to 2048 is expected to recover several of these.
+- **Logic errors** (~50 failures): genuine incorrect implementations (wrong algorithm, off-by-one, incorrect string handling).
+
+All failures are `checker_assertion` type — no `request_error` or `checker_timeout` failures, confirming the endpoint and evaluation harness are stable.
+
+### Generation Speed Note
+
+The 78.9 tok/s observed here is ~3× higher than earlier `p2/ctx100k` runs (which showed ~24.9 tok/s). Investigation confirmed the earlier runs hit the endpoint during or immediately after a cold start transition; the 78.9 tok/s is the real steady-state throughput for this config on a warm worker.
+
+### Running the Benchmark
+
+```bash
+# Full 164-problem run (recommended)
+python scripts/humaneval.py --n 164 --workers 1 --failures --label p2-ctx100k
+
+# Quick 20-problem check (note: first 20 are easy, not representative of full score)
+python scripts/humaneval.py --n 20 --workers 1 --failures
+
+# With higher token limit (recommended for accurate scoring)
+python scripts/humaneval.py --n 164 --max-tokens 2048 --failures --label p2-ctx100k-2k
+```
+
+Results are appended automatically to [docs/benchmarks/humaneval-summary.md](benchmarks/humaneval-summary.md).
+
+---
+
 Reference for cold start timing, volume throughput, --mlock evaluation, and warmup cost analysis.
 
 ---
@@ -171,6 +229,24 @@ eviction of pages and could genuinely help repeat-start latency.
 --parallel 1         # single request slot (sufficient for single-developer use)
 --ctx-size 32768     # 32K context window
 --flash-attn on      # FlashAttention2 for memory efficiency
+```
+
+### Context Window Policy (96 GB VRAM, IQ4_XS)
+
+For this deployment profile (~61 GiB base model load on RTX Pro 6000 Blackwell 96 GB):
+
+| Tier | Context cap | Intent |
+|---|---|---|
+| Safe | `100000` | Production default for stable headroom |
+| Experimental | `131072` | Upper-limit stress testing only |
+
+Anything above `131072` is rejected by runtime config validation (`nemotron.py`) and should not be benchmarked on this SKU.
+
+Use the built-in limits sweep profile:
+
+```bash
+BENCH_PROFILE=limits BENCH_ALLOW_EXPERIMENTAL=1 \
+bash scripts/run_humaneval_sweep.sh c1fb77ul6l2dw2
 ```
 
 ---

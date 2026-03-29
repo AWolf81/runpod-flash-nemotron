@@ -1,0 +1,330 @@
+{
+  "timestamp_utc": "2026-03-29T15:18:31.112867+00:00",
+  "endpoint": "https://c1fb77ul6l2dw2.api.runpod.ai",
+  "endpoint_id": "c1fb77ul6l2dw2",
+  "endpoint_source": "NEMOTRON_BENCH_ENDPOINT",
+  "model": "nemotron-super-120b-iq4",
+  "model_source": "NEMOTRON_BENCH_MODEL",
+  "label": "p2-ctx16384",
+  "runtime_config": {
+    "n_gpu_layers": 99,
+    "parallel": 2,
+    "ctx_size": 24576,
+    "flash_attn": "on"
+  },
+  "n_problems": 20,
+  "passed": 16,
+  "pass_at_1_pct": 80.0,
+  "avg_tok_s": 71.05,
+  "avg_latency_s": 4.684,
+  "workers": 1,
+  "max_tokens": 512,
+  "timeout_s": 10.0,
+  "failure_summary": {
+    "by_type": {
+      "checker_assertion": 4
+    },
+    "top_reasons": [
+      {
+        "reason": "failed:",
+        "count": 3
+      },
+      {
+        "reason": "failed: unterminated triple-quoted string literal (detected at line 46) (<string>, line 28)",
+        "count": 1
+      }
+    ]
+  },
+  "failed_tasks": [
+    {
+      "task_id": "HumanEval/1",
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/3",
+      "failure_type": "checker_assertion",
+      "error": "failed: unterminated triple-quoted string literal (detected at line 46) (<string>, line 28)",
+      "checker_result": "failed: unterminated triple-quoted string literal (detected at line 46) (<string>, line 28)",
+      "completion_preview": "from typing import List\n\ndef below_zero(operations: List[int]) -> bool:\n    \"\"\" You're given a list of deposit and withdrawal operations on a bank account that starts with\n    zero balance. Your task is to detect if at any point the balance of account fall"
+    },
+    {
+      "task_id": "HumanEval/10",
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": ""
+    },
+    {
+      "task_id": "HumanEval/19",
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": ""
+    }
+  ],
+  "results": {
+    "HumanEval/0": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    n = len(numbers)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if abs(numbers[i] - numbers[j]) < threshold:\n                return True\n    return False",
+      "tok_s": 68.16376564074245,
+      "latency_s": 5.413433318000898,
+      "prompt_tokens": 170,
+      "completion_tokens": 369,
+      "total_tokens": 539,
+      "finish_reason": "stop"
+    },
+    "HumanEval/1": {
+      "passed": false,
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": "",
+      "tok_s": 74.39506999785532,
+      "latency_s": 6.882176466999226,
+      "prompt_tokens": 168,
+      "completion_tokens": 512,
+      "total_tokens": 680,
+      "finish_reason": "length"
+    },
+    "HumanEval/2": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def truncate_number(number: float) -> float:\n    import math\n    return number - math.floor(number)",
+      "tok_s": 68.43247801656145,
+      "latency_s": 4.456948057999398,
+      "prompt_tokens": 132,
+      "completion_tokens": 305,
+      "total_tokens": 437,
+      "finish_reason": "stop"
+    },
+    "HumanEval/3": {
+      "passed": false,
+      "failure_type": "checker_assertion",
+      "error": "failed: unterminated triple-quoted string literal (detected at line 46) (<string>, line 28)",
+      "checker_result": "failed: unterminated triple-quoted string literal (detected at line 46) (<string>, line 28)",
+      "completion_preview": "from typing import List\n\ndef below_zero(operations: List[int]) -> bool:\n    \"\"\" You're given a list of deposit and withdrawal operations on a bank account that starts with\n    zero balance. Your task is to detect if at any point the balance of account fall",
+      "tok_s": 74.38073807689031,
+      "latency_s": 6.883502546999807,
+      "prompt_tokens": 163,
+      "completion_tokens": 512,
+      "total_tokens": 675,
+      "finish_reason": "length"
+    },
+    "HumanEval/4": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\ndef mean_absolute_deviation(numbers: List[float]) -> float:\n    if not numbers:\n        return 0.0\n    mean = sum(numbers) / len(numbers)\n    total = sum(abs(x - mean) for x in numbers)\n    return total / len(numbers)",
+      "tok_s": 67.07015313519761,
+      "latency_s": 3.50379399799931,
+      "prompt_tokens": 166,
+      "completion_tokens": 235,
+      "total_tokens": 401,
+      "finish_reason": "stop"
+    },
+    "HumanEval/5": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\ndef intersperse(numbers: List[int], delimeter: int) -> List[int]:\n    if not numbers:\n        return []\n    result = []\n    for i, num in enumerate(numbers):\n        result.append(num)\n        if i < len(numbers) - 1:\n            result.append(delimeter)\n    return result",
+      "tok_s": 69.56678062638521,
+      "latency_s": 4.183031001000927,
+      "prompt_tokens": 144,
+      "completion_tokens": 291,
+      "total_tokens": 435,
+      "finish_reason": "stop"
+    },
+    "HumanEval/6": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\ndef parse_nested_parens(paren_string: str) -> List[int]:\n    result = []\n    for group in paren_string.split():\n        cur_depth = 0\n        max_depth = 0\n        for ch in group:\n            if ch == '(':\n                cur_depth += 1\n                if cur_depth > max_depth:\n                    max_depth = cur_depth\n            e...",
+      "tok_s": 71.36204873563591,
+      "latency_s": 5.423050583001896,
+      "prompt_tokens": 161,
+      "completion_tokens": 387,
+      "total_tokens": 548,
+      "finish_reason": "stop"
+    },
+    "HumanEval/7": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\n\ndef filter_by_substring(strings: List[str], substring: str) -> List[str]:\n    \"\"\" Filter an input list of strings only for ones that contain given substring\n    >>> filter_by_substring([], 'a')\n    []\n    >>> filter_by_substring(['abc', 'bacd', 'cde', 'array'], 'a')\n    ['abc', 'bacd', 'array']\n    \"\"\"\n    return [s for s in strings...",
+      "tok_s": 68.02608886956546,
+      "latency_s": 3.32225479599947,
+      "prompt_tokens": 141,
+      "completion_tokens": 226,
+      "total_tokens": 367,
+      "finish_reason": "stop"
+    },
+    "HumanEval/8": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List, Tuple\n\n\ndef sum_product(numbers: List[int]) -> Tuple[int, int]:\n    \"\"\" For a given list of integers, return a tuple consisting of a sum and a product of all the integers in a list.\n    Empty sum should be equal to 0 and empty product should be equal to 1.\n    >>> sum_product([])\n    (0, 1)\n    >>> sum_product([1, 2, 3, 4])\n    (10, ...",
+      "tok_s": 71.48373091628558,
+      "latency_s": 4.224737518998154,
+      "prompt_tokens": 157,
+      "completion_tokens": 302,
+      "total_tokens": 459,
+      "finish_reason": "stop"
+    },
+    "HumanEval/9": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def rolling_max(numbers: List[int]) -> List[int]:\n    result = []\n    current_max = None\n    for n in numbers:\n        if current_max is None or n > current_max:\n            current_max = n\n        result.append(current_max)\n    return result",
+      "tok_s": 70.35094563271372,
+      "latency_s": 3.525183603000187,
+      "prompt_tokens": 145,
+      "completion_tokens": 248,
+      "total_tokens": 393,
+      "finish_reason": "stop"
+    },
+    "HumanEval/10": {
+      "passed": false,
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": "",
+      "tok_s": 76.31866091113666,
+      "latency_s": 6.708713096999418,
+      "prompt_tokens": 196,
+      "completion_tokens": 512,
+      "total_tokens": 708,
+      "finish_reason": "length"
+    },
+    "HumanEval/11": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\n\ndef string_xor(a: str, b: str) -> str:\n    \"\"\" Input are two strings a and b consisting only of 1s and 0s.\n    Perform binary XOR on these inputs and return result also as a string.\n    >>> string_xor('010', '110')\n    '100'\n    \"\"\"\n    return ''.join('0' if x == y else '1' for x, y in zip(a, b))",
+      "tok_s": 73.21128117346088,
+      "latency_s": 5.805116276998888,
+      "prompt_tokens": 129,
+      "completion_tokens": 425,
+      "total_tokens": 554,
+      "finish_reason": "stop"
+    },
+    "HumanEval/12": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List, Optional\n\n\ndef longest(strings: List[str]) -> Optional[str]:\n    \"\"\" Out of list of strings, return the longest one. Return the first one in case of multiple\n    strings of the same length. Return None in case the input list is empty.\n    >>> longest([])\n\n    >>> longest(['a', 'b', 'c'])\n    'a'\n    >>> longest(['a', 'bb', 'ccc'])\n  ...",
+      "tok_s": 75.84237101127039,
+      "latency_s": 5.115873816001113,
+      "prompt_tokens": 147,
+      "completion_tokens": 388,
+      "total_tokens": 535,
+      "finish_reason": "stop"
+    },
+    "HumanEval/13": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def greatest_common_divisor(a: int, b: int) -> int:\n    a, b = abs(a), abs(b)\n    while b:\n        a, b = b, a % b\n    return a",
+      "tok_s": 63.88491530133878,
+      "latency_s": 2.4575441520028107,
+      "prompt_tokens": 120,
+      "completion_tokens": 157,
+      "total_tokens": 277,
+      "finish_reason": "stop"
+    },
+    "HumanEval/14": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\n\ndef all_prefixes(string: str) -> List[str]:\n    \"\"\" Return list of all prefixes from shortest to longest of the input string\n    >>> all_prefixes('abc')\n    ['a', 'ab', 'abc']\n    \"\"\"\n    return [string[:i] for i in range(1, len(string) + 1)]",
+      "tok_s": 68.10731118083592,
+      "latency_s": 3.156782968999323,
+      "prompt_tokens": 103,
+      "completion_tokens": 215,
+      "total_tokens": 318,
+      "finish_reason": "stop"
+    },
+    "HumanEval/15": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def string_sequence(n: int) -> str:\n    return ' '.join(str(i) for i in range(n + 1))",
+      "tok_s": 65.80383121827133,
+      "latency_s": 3.3432703830003447,
+      "prompt_tokens": 115,
+      "completion_tokens": 220,
+      "total_tokens": 335,
+      "finish_reason": "stop"
+    },
+    "HumanEval/16": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def count_distinct_characters(string: str) -> int:\n    \"\"\" Given a string, find out how many distinct characters (regardless of case) does it consist of\n    >>> count_distinct_characters('xyzXYZ')\n    3\n    >>> count_distinct_characters('Jerry')\n    4\n    \"\"\"\n    return len(set(string.lower()))",
+      "tok_s": 70.4394276251187,
+      "latency_s": 3.5349520630006737,
+      "prompt_tokens": 119,
+      "completion_tokens": 249,
+      "total_tokens": 368,
+      "finish_reason": "stop"
+    },
+    "HumanEval/17": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "from typing import List\n\ndef parse_music(music_string: str) -> List[int]:\n    \"\"\"Parse a string of musical notes and return a list of beat durations.\"\"\"\n    beat_map = {\n        'o': 4,\n        'o|': 2,\n        '.|': 1,\n    }\n    return [beat_map[token] for token in music_string.split()]",
+      "tok_s": 73.74019379290087,
+      "latency_s": 4.705710442998679,
+      "prompt_tokens": 218,
+      "completion_tokens": 347,
+      "total_tokens": 565,
+      "finish_reason": "stop"
+    },
+    "HumanEval/18": {
+      "passed": true,
+      "failure_type": null,
+      "error": null,
+      "checker_result": "passed",
+      "completion_preview": "def how_many_times(string: str, substring: str) -> int:\n    if not substring:\n        return 0\n    sub_len = len(substring)\n    count = 0\n    for i in range(len(string) - sub_len + 1):\n        if string[i:i+sub_len] == substring:\n            count += 1\n    return count",
+      "tok_s": 74.09249185533191,
+      "latency_s": 4.318926142001146,
+      "prompt_tokens": 134,
+      "completion_tokens": 320,
+      "total_tokens": 454,
+      "finish_reason": "stop"
+    },
+    "HumanEval/19": {
+      "passed": false,
+      "failure_type": "checker_assertion",
+      "error": "failed: ",
+      "checker_result": "failed: ",
+      "completion_preview": "",
+      "tok_s": 76.30394638117254,
+      "latency_s": 6.710006811998028,
+      "prompt_tokens": 155,
+      "completion_tokens": 512,
+      "total_tokens": 667,
+      "finish_reason": "length"
+    }
+  }
+}
